@@ -11,9 +11,9 @@ function addUser(user) {
 
   return db.query(query, [
     username,
-    email,
+    email ?? null,
     password,
-    telegram_id,
+    telegram_id ?? null,
     is_premium ?? false,
   ]);
 }
