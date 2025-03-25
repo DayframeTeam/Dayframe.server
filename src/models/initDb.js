@@ -80,6 +80,7 @@ const createCalendarEventsTable = () => {
     CREATE TABLE IF NOT EXISTS calendar_events (
       id INT AUTO_INCREMENT PRIMARY KEY,
       title VARCHAR(255) NOT NULL,
+      status ENUM('done', 'planned') DEFAULT 'planned',
       start_time TIME,
       event_date DATE NOT NULL,
       duration VARCHAR(10),
