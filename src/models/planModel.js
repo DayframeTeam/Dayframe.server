@@ -15,6 +15,7 @@ function addPlan(plan) {
     category = null,
     priority = null,
     exp = null,
+    start_time = null,
     description = null,
     is_active = true,
     repeat_rule = 'daily',
@@ -23,10 +24,10 @@ function addPlan(plan) {
 
   const query = `
     INSERT INTO plans (
-      title, duration, category, priority,
+      title, duration, category, priority, start_time,
       exp, description, is_active, repeat_rule, user_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const values = [
@@ -34,6 +35,7 @@ function addPlan(plan) {
     duration,
     category,
     priority,
+    start_time,
     exp,
     description,
     is_active,

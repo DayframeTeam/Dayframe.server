@@ -58,6 +58,7 @@ const createPlansTable = () => {
       duration VARCHAR(10),
       category ENUM('required', 'optional'),
       priority ENUM('low', 'medium', 'high'),
+      start_time TIME,
       exp TINYINT,
       description TEXT,
       is_active BOOLEAN DEFAULT TRUE,
@@ -79,7 +80,7 @@ const createCalendarEventsTable = () => {
     CREATE TABLE IF NOT EXISTS calendar_events (
       id INT AUTO_INCREMENT PRIMARY KEY,
       title VARCHAR(255) NOT NULL,
-      start_time TIME NOT NULL,
+      start_time TIME,
       event_date DATE NOT NULL,
       duration VARCHAR(10),
       category ENUM('required', 'optional'),

@@ -2,6 +2,7 @@ const db = require('../config/db');
 
 // Получить все события пользователя
 function getEventsByUserId(user_id) {
+  console.log('calendar_events');
   const query = 'SELECT * FROM calendar_events WHERE user_id = ?';
   return db.query(query, [user_id]);
 }
@@ -10,7 +11,7 @@ function getEventsByUserId(user_id) {
 function addEvent(event) {
   const {
     title,
-    start_time,
+    start_time = null,
     event_date,
     duration = null,
     category = null,
