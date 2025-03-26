@@ -83,3 +83,40 @@ exports.updateTemplateTask = (req, res) => {
       res.status(500).json({ error: 'Ошибка при обновлении шаблона' });
     });
 };
+
+exports.updateTemplateSubtaskStatus = (req, res) => {
+  const subtaskId = Number(req.params.id);
+  const { is_done } = req.body;
+
+  if (typeof is_done !== 'boolean') {
+    return res.status(400).json({ error: 'Поле is_done должно быть boolean' });
+  }
+
+  templateSubtaskModel
+    .getTemplateSubtaskById(subtaskId)
+    .then(([rows]) => {
+      if (!rows || rows.length === 0) {
+        return res.status(404).json({ error: 'Шаблон подзадачи не найден' });
+      }
+
+      const templateTaskId = rows[0].template_task_id;
+
+      return templateSubtaskModel
+        .updateTemplateSubtaskStatus(subtaskId, is_done)
+        .then(() =>
+          templateTaskModel.updateStatusByTemplateSubtasks(templateTaskId),
+        )
+        .then(() =>
+          res.json({ message: '✅ Статус шаблонной подзадачи обновлён' }),
+        );
+    })
+    .catch((err) => {
+      console.error(
+        '❌ Ошибка при обновлении статуса шаблонной подзадачи:',
+        err,
+      );
+      res
+        .status(500)
+        .json({ error: 'Ошибка при обновлении шаблонной подзадачи' });
+    });
+};

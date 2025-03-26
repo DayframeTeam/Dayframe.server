@@ -13,7 +13,7 @@ router.post('/', taskController.createTask);
 router.delete('/:id', authorizeTask,  taskController.deleteTask);
 
 // Отметить задачу как выполненную
-router.patch('/:id/done', authorizeTask, taskController.updateTaskStatus);
+router.patch('/is_done/:id', authorizeTask, taskController.updateTaskStatus);
 
 // 🔄 Обновить задачу
 router.patch('/:id', authorizeTask, taskController.updateTask);

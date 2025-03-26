@@ -104,10 +104,35 @@ function updateTemplateTaskById(id, task) {
   );
 }
 
+function updateStatusByTemplateSubtasks(templateTaskId) {
+  return db
+    .query(
+      'SELECT COUNT(*) as total FROM template_subtasks WHERE template_task_id = ?',
+      [templateTaskId],
+    )
+    .then(([[{ total }]]) => {
+      if (total === 0) return; // Подзадач нет — не трогаем
+
+      return db
+        .query(
+          'SELECT COUNT(*) as active FROM template_subtasks WHERE template_task_id = ? AND is_done = 1',
+          [templateTaskId],
+        )
+        .then(([[{ active }]]) => {
+          const newStatus = active > 0 ? 1 : 0;
+          return db.query(
+            'UPDATE template_tasks SET is_done = ? WHERE id = ?',
+            [newStatus, templateTaskId],
+          );
+        });
+    });
+}
+
 module.exports = {
   getAllTemplateTasksByUser,
   getTemplateTaskById,
   addTemplateTask,
   deleteTemplateTaskById,
   updateTemplateTaskById,
+  updateStatusByTemplateSubtasks,
 };
