@@ -28,9 +28,15 @@ exports.createTask = (req, res) => {
 
   taskModel
     .addTask(newTask)
-    .then(([result]) =>
-      res.status(201).json({ id: result.insertId, ...newTask }),
-    )
+    .then(([result]) => taskModel.getTaskById(result.insertId)) // ✅ получаем добавленную задачу
+    .then(([rows]) => {
+      if (!rows || rows.length === 0) {
+        return res
+          .status(404)
+          .json({ error: 'Задача не найдена после создания' });
+      }
+      res.status(201).json(rows[0]);
+    })
     .catch((err) => res.status(500).json({ error: err.message }));
 };
 
@@ -50,22 +56,27 @@ exports.deleteTask = (req, res) => {
 
 exports.updateTaskStatus = (req, res) => {
   const taskId = req.params.id;
-  const { status } = req.body; // ожидается boolean
+  const { status } = req.body;
 
   if (typeof status !== 'boolean') {
     return res.status(400).json({ error: 'Поле status должно быть boolean' });
   }
 
   taskModel
-    .setTaskStatus(taskId, status)
+    .setTaskStatus(status, taskId)
     .then(([result]) => {
       if (result.affectedRows === 0) {
         return res.status(404).json({ error: 'Задача не найдена' });
       }
-
-      res.json({
-        message: `Задача ${status ? 'выполнена' : 'снята с выполнения'}`,
-      });
+      return taskModel.getTaskById(taskId); // ✅ возвращаем актуальную задачу
+    })
+    .then(([rows]) => {
+      if (!rows || rows.length === 0) {
+        return res
+          .status(404)
+          .json({ error: 'Задача не найдена после обновления' });
+      }
+      res.json(rows[0]);
     })
     .catch((err) => res.status(500).json({ error: err.message }));
 };
@@ -80,8 +91,15 @@ exports.updateTask = (req, res) => {
       if (result.affectedRows === 0) {
         return res.status(404).json({ error: 'Задача не найдена' });
       }
-
-      res.json({ message: '✅ Задача обновлена', updated: updatedData });
+      return taskModel.getTaskById(taskId); // ✅ получаем обновлённую задачу
+    })
+    .then(([rows]) => {
+      if (!rows || rows.length === 0) {
+        return res
+          .status(404)
+          .json({ error: 'Задача не найдена после обновления' });
+      }
+      res.json(rows[0]);
     })
     .catch((err) => {
       console.error('❌ Ошибка при обновлении задачи:', err);

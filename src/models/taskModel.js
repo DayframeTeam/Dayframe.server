@@ -3,6 +3,9 @@ const db = require('../config/db');
 function getAllTasksByUser(userId) {
   return db.query('SELECT * FROM tasks WHERE user_id = ?', [userId]);
 }
+function getTaskById(id) {
+  return db.query('SELECT * FROM tasks WHERE id = ?', [id]);
+}
 
 function addTask(task) {
   const {
@@ -85,6 +88,7 @@ function updateTaskById(id, task) {
 
 module.exports = {
   getAllTasksByUser,
+  getTaskById,
   addTask,
   deleteTaskById,
   setTaskStatus,
