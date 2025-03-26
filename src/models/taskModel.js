@@ -1,68 +1,92 @@
 const db = require('../config/db');
 
-// Получить все задачи
-function getAllTasks() {
-  return db.query('SELECT * FROM tasks');
+function getAllTasksByUser(userId) {
+  return db.query('SELECT * FROM tasks WHERE user_id = ?', [userId]);
 }
 
-// Добавить задачу
 function addTask(task) {
   const {
     title,
-    status = 'planned',
-    duration = null,
-    category = null,
-    priority = null,
-    start_time = null,
-    exp = null,
-    description = null,
-    task_date = null,
-    source = 'manual',
-    repeat_rule = null,
-    source_id = null,
+    description,
+    status = false,
+    category,
+    priority,
+    exp = 0,
+    duration,
+    start_time,
+    end_time,
+    task_date,
     user_id,
   } = task;
 
-  const query = `
-    INSERT INTO tasks (
-      title, status, duration, category, priority, start_time,
-      exp, description, task_date, source, repeat_rule, source_id, user_id
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  const values = [
-    title,
-    status,
-    duration,
-    category,
-    priority,
-    start_time,
-    exp,
-    description,
-    task_date,
-    source,
-    repeat_rule,
-    source_id,
-    user_id,
-  ];
-
-  return db.query(query, values);
+  return db.query(
+    `INSERT INTO tasks (
+      title, description, status, category, priority, exp,
+      duration, start_time, end_time, task_date, user_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      title,
+      description,
+      status,
+      category,
+      priority,
+      exp,
+      duration,
+      start_time,
+      end_time,
+      task_date,
+      user_id,
+    ],
+  );
 }
 
-// Удалить задачу по ID
 function deleteTaskById(id) {
   return db.query('DELETE FROM tasks WHERE id = ?', [id]);
 }
 
-// Отметить задачу выполненной
-function markTaskAsDone(id) {
-  return db.query('UPDATE tasks SET status = ? WHERE id = ?', ['done', id]);
+function setTaskStatus(status, id) {
+  return db.query('UPDATE tasks SET status = ? WHERE id = ?', [status, id]);
+}
+
+function updateTaskById(id, task) {
+  const {
+    title,
+    description,
+    status,
+    category,
+    priority,
+    exp,
+    duration,
+    start_time,
+    end_time,
+    task_date,
+  } = task;
+
+  return db.query(
+    `UPDATE tasks SET
+      title = ?, description = ?, status = ?, category = ?, priority = ?, exp = ?,
+      duration = ?, start_time = ?, end_time = ?, task_date = ?
+     WHERE id = ?`,
+    [
+      title,
+      description,
+      status,
+      category,
+      priority,
+      exp,
+      duration,
+      start_time,
+      end_time,
+      task_date,
+      id,
+    ],
+  );
 }
 
 module.exports = {
-  getAllTasks,
+  getAllTasksByUser,
   addTask,
   deleteTaskById,
-  markTaskAsDone,
+  setTaskStatus,
+  updateTaskById,
 };
