@@ -35,3 +35,22 @@ exports.deleteEvent = (req, res) => {
     })
     .catch((err) => res.status(500).json({ error: err.message }));
 };
+
+// Обновить статус события (и опыт)
+exports.updateEventStatus = (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const user_id = 1;//TODO:
+
+  if (!['done', 'planned'].includes(status)) {
+    return res.status(400).json({ error: 'Недопустимый статус' });
+  }
+
+  calendarModel
+    .updateEventStatus(user_id, id, status)
+    .then((result) => res.json(result))
+    .catch((err) => {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    });
+};

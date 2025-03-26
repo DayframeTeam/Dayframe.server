@@ -1,4 +1,19 @@
 const db = require('../config/db');
+const userModel = require('../models/userModel');
+
+/**
+ * Проверка прав доступа пользователя к событию
+ * Возвращает { status, exp } если пользователь владелец, иначе null
+ */
+function checkUserAccessToEvent(id, user_id) {
+  const query = `
+    SELECT status, exp FROM calendar_events 
+    WHERE id = ? AND user_id = ?
+  `;
+  return db.query(query, [id, user_id]).then(([rows]) => {
+    return rows.length > 0 ? rows[0] : null;
+  });
+}
 
 // Получить все события пользователя
 function getEventsByUserId(user_id) {
@@ -51,8 +66,36 @@ function deleteEventById(id) {
   return db.query('DELETE FROM calendar_events WHERE id = ?', [id]);
 }
 
+// Обновить статус события и скорректировать опыт пользователя
+function updateEventStatus(user_id, id, status) {
+  return checkUserAccessToEvent(id, user_id).then((event) => {
+    if (!event) {
+      throw new Error('Событие не найдено или нет доступа');
+    }
+
+    const { status: currentStatus, exp = 0 } = event;
+
+    if (currentStatus === status) {
+      return { message: 'Статус не изменился' };
+    }
+
+    const updateQuery = 'UPDATE calendar_events SET status = ? WHERE id = ?';
+    return db
+      .query(updateQuery, [status, id])
+      .then(() => {
+        if (status === 'done') {
+          return userModel.addUserExp(user_id, exp);
+        } else if (status === 'planned') {
+          return userModel.subtractUserExp(user_id, exp);
+        }
+      })
+      .then(() => ({ message: 'Статус обновлён и опыт скорректирован' }));
+  });
+}
+
 module.exports = {
   getEventsByUserId,
   addEvent,
   deleteEventById,
+  updateEventStatus,
 };

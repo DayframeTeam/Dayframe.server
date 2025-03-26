@@ -11,4 +11,7 @@ router.post('/', calendarController.createEvent);
 // Удалить событие
 router.delete('/:id', calendarController.deleteEvent);
 
+// 🔄 Обновить статус события
+router.patch('/status/:id', calendarController.updateEventStatus);
+
 module.exports = router;
