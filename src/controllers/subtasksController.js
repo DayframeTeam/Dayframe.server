@@ -1,5 +1,4 @@
 const subtaskModel = require('../models/subtaskModel');
-const taskModel = require('../models/taskModel');
 const taskController = require('./taskController');
 
 exports.getAllByUserId = (req, res) => {
@@ -10,8 +9,13 @@ exports.getAllByUserId = (req, res) => {
   }
 
   subtaskModel
-    .getAllSubtasksByUser(userId)
-    .then(([rows]) => res.json(rows))
+    .getSubtasksAllByUserId(userId)
+    .then(([result]) => {
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Задача не найдена' });
+      }
+      return taskController.getFullTaskById(taskId);
+    })
     .catch((err) => {
       console.error('Ошибка при получении подзадач:', err);
       res.status(500).json({ error: err.message });
@@ -25,11 +29,7 @@ exports.getAllByParentTaskId = (req, res) => {
   if (!parentTaskId) {
     return res.status(400).json({ error: 'Не передан parent_task_id' });
   }
-
-  subtaskModel
-    .getAllByParentId(parentTaskId)
-    .then(([rows]) => res.json(rows))
-    .catch((err) => res.status(500).json({ error: err.message }));
+  taskController.getFullTaskById(parentTaskId)
 };
 
 exports.createSubtask = (req, res) => {
@@ -45,7 +45,7 @@ exports.createSubtask = (req, res) => {
   subtaskModel
     .addSubtask(userId, subtask)
     .then(([result]) =>
-      taskModel
+      taskController
         .updateStatusBySubtasks(subtask.parent_task_id)
         .then(() => taskController.getFullTaskById(subtask.parent_task_id)),
     )
@@ -81,7 +81,7 @@ exports.deleteSubtask = (req, res) => {
 
       return subtaskModel
         .deleteSubtaskById(subtaskId)
-        .then(() => taskModel.updateStatusBySubtasks(parentTaskId))
+        .then(() => taskController.updateStatusBySubtasks(parentTaskId))
         .then(() => taskController.getFullTaskById(parentTaskId));
     })
     .then((task) => {
@@ -102,12 +102,15 @@ exports.updateSubtaskStatus = (req, res) => {
   const subtaskId = Number(req.params.id);
   const { is_done } = req.body;
 
+  // Проверяем корректность входных данных
   if (typeof is_done !== 'boolean') {
-    return res.status(400).json({ error: 'Поле is_done должно быть boolean' });
+    return res
+      .status(400)
+      .json({ error: 'Поле is_done должно быть boolean (true/false)' });
   }
 
-  subtaskModel
-    .getSubtaskById(subtaskId)
+  // Получаем подзадачу по её ID
+  subtaskModel.getSubtaskById(subtaskId)
     .then(([rows]) => {
       if (!rows.length) {
         return res.status(404).json({ error: 'Подзадача не найдена' });
@@ -115,21 +118,15 @@ exports.updateSubtaskStatus = (req, res) => {
 
       const parentTaskId = rows[0].parent_task_id;
 
-      return subtaskModel
-        .updateSubtaskStatus(subtaskId, is_done)
-        .then(() => taskModel.updateStatusBySubtasks(parentTaskId))
-        .then(() => taskController.getFullTaskById(parentTaskId));
-    })
-    .then((task) => {
-      if (!task) {
-        return res
-          .status(404)
-          .json({ error: 'Задача не найдена после обновления подзадачи' });
-      }
-      res.json(task);
+      // Обновляем статус подзадачи
+      return subtaskModel.updateSubtaskStatus(subtaskId, is_done)
+        .then(() => {
+          // После обновления подзадачи — пересчитываем статус родительской задачи
+          return taskController.updateStatusBySubtasks(parentTaskId, req, res);
+        });
     })
     .catch((err) => {
-      console.error('❌ Ошибка при обновлении статуса подзадачи:', err);
+      console.error('❌ Ошибка при обновлении подзадачи:', err);
       res.status(500).json({ error: 'Ошибка при обновлении подзадачи' });
     });
 };

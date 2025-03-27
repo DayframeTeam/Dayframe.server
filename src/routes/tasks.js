@@ -4,7 +4,7 @@ const taskController = require('../controllers/taskController');
 const authorizeTask = require('../middleware/authorizeTask');
 
 // Получить все задачи по id пользователя
-router.get('/', taskController.getTasks);
+router.get('/', taskController.getTasksWithSubTasks);
 
 // Добавить новую задачу
 router.post('/', taskController.createTask);

@@ -1,18 +1,13 @@
 const db = require('../config/db');
 
-exports.getAllSubtasksByUser = (userId) => {
-  const query = `
-    SELECT subtasks.*
-    FROM subtasks
-    JOIN tasks ON subtasks.parent_task_id = tasks.id
-    WHERE tasks.user_id = ?
-  `;
-  return db.query(query, [userId]);
+exports.getSubtasksAllByUserId = (user_id) => {
+  const query = 'SELECT * FROM subtasks WHERE user_id = ?';
+  return db.query(query, [user_id]);
 };
 
-exports.getAllByParentId = (parentTaskId) => {
+exports.getAllSubtasksByParentTaskId = (parent_task_id) => {
   return db.query('SELECT * FROM subtasks WHERE parent_task_id = ?', [
-    parentTaskId,
+    parent_task_id,
   ]);
 };
 
@@ -60,4 +55,22 @@ exports.updateSubtask = (id, title, position) => {
     position,
     id,
   ]);
+};
+
+exports.countAllSubtaskByParentTaskId = (parent_task_id) => {
+  const query = `
+    SELECT COUNT(*) AS total
+    FROM subtasks
+    WHERE parent_task_id = ?
+  `;
+  return db.query(query, [parent_task_id]);
+};
+
+exports.countCompletedSubtaskByParentTaskId = (parent_task_id) => {
+  const query = `
+    SELECT COUNT(*) AS completed
+    FROM subtasks
+    WHERE parent_task_id = ? AND is_done = 1
+  `;
+  return db.query(query, [parent_task_id]);
 };
