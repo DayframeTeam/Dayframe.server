@@ -29,8 +29,8 @@ exports.addSubtask = (user_id, subtask) => {
     title,
     is_done,
     position,
-    user_id,
     special_id,
+    user_id,
   ]);
 };
 

@@ -35,7 +35,7 @@ exports.updateStatusBySubtasks = async (parent_task_id, req, res) => {
       body: { is_done: newStatus },
     };
 
-    return exports.updateTaskStatus(fakeReq, res); // отправка происходит внутри
+    return exports.updateTaskStatus(fakeReq, res);
   } catch (err) {
     console.error('❌ Ошибка при пересчёте статуса задачи по подзадачам:', err);
     res.status(500).json({ error: 'Ошибка при обновлении статуса задачи' });
@@ -107,7 +107,7 @@ exports.updateTask = async (req, res) => {
     const subtaskPromises = updatedTask.subtasks.map((subtask) => {
       if (!subtask.id && !subtask.is_deleted) {
         // Новая подзадача
-        return subtaskModel.createSubtask({
+        return subtaskModel.addSubtask(updatedTask.user_id, {
           ...subtask,
           parent_task_id: taskId,
         });
@@ -127,10 +127,10 @@ exports.updateTask = async (req, res) => {
     });
 
     await Promise.all(subtaskPromises);
-    await taskController.updateStatusBySubtasks(taskId, req, res);
+    await exports.updateStatusBySubtasks(taskId, req, res);
     // Возвращаем обновлённую задачу
-    const fullTask = await taskController.getFullTaskById(taskId);
-    res.json(fullTask);
+    // const fullTask = await exports.getFullTaskById(taskId);
+    // res.json(fullTask);
   } catch (err) {
     console.error('❌ Ошибка при обновлении задачи и подзадач:', err);
     res.status(500).json({ error: 'Ошибка при обновлении задачи' });
