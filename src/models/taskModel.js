@@ -71,10 +71,8 @@ function updateTaskById(id, task) {
   const {
     title,
     description,
-    status,
     category,
     priority,
-    exp,
     duration,
     start_time,
     end_time,
@@ -83,16 +81,13 @@ function updateTaskById(id, task) {
 
   return db.query(
     `UPDATE tasks SET
-      title = ?, description = ?, status = ?, category = ?, priority = ?, exp = ?,
-      duration = ?, start_time = ?, end_time = ?, task_date = ?
+      title = ?, description = ?, category = ?, priority = ?, duration = ?, start_time = ?, end_time = ?, task_date = ?
      WHERE id = ?`,
     [
       title,
       description,
-      status,
       category,
       priority,
-      exp,
       duration,
       start_time,
       end_time,

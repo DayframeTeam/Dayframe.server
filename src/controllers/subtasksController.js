@@ -29,7 +29,7 @@ exports.getAllByParentTaskId = (req, res) => {
   if (!parentTaskId) {
     return res.status(400).json({ error: 'Не передан parent_task_id' });
   }
-  taskController.getFullTaskById(parentTaskId)
+  taskController.getFullTaskById(parentTaskId);
 };
 
 exports.createSubtask = (req, res) => {
@@ -65,23 +65,25 @@ exports.createSubtask = (req, res) => {
 
 exports.deleteSubtask = (req, res) => {
   const subtaskId = Number(req.params.id);
+  const parentTaskId = Number(req.body.parent_task_id);
 
-  if (!subtaskId) {
-    return res.status(400).json({ error: 'Некорректный ID подзадачи' });
+  if (!subtaskId || !parentTaskId) {
+    return res
+      .status(400)
+      .json({ error: 'Некорректный ID подзадачи или задачи' });
   }
 
   subtaskModel
-    .getSubtaskById(subtaskId)
-    .then(([rows]) => {
-      if (!rows || rows.length === 0) {
-        return res.status(404).json({ error: 'Подзадача не найдена' });
+    .deleteSubtaskById(subtaskId)
+    .then(([result]) => {
+      if (result.affectedRows === 0) {
+        return res
+          .status(404)
+          .json({ error: 'Подзадача не найдена или уже удалена' });
       }
 
-      const parentTaskId = rows[0].parent_task_id;
-
-      return subtaskModel
-        .deleteSubtaskById(subtaskId)
-        .then(() => taskController.updateStatusBySubtasks(parentTaskId))
+      return taskController
+        .updateStatusBySubtasks(parentTaskId)
         .then(() => taskController.getFullTaskById(parentTaskId));
     })
     .then((task) => {
@@ -90,6 +92,7 @@ exports.deleteSubtask = (req, res) => {
           .status(404)
           .json({ error: 'Задача не найдена после удаления подзадачи' });
       }
+
       res.json(task);
     })
     .catch((err) => {
@@ -110,37 +113,6 @@ exports.updateSubtaskStatus = (req, res) => {
   }
 
   // Получаем подзадачу по её ID
-  subtaskModel.getSubtaskById(subtaskId)
-    .then(([rows]) => {
-      if (!rows.length) {
-        return res.status(404).json({ error: 'Подзадача не найдена' });
-      }
-
-      const parentTaskId = rows[0].parent_task_id;
-
-      // Обновляем статус подзадачи
-      return subtaskModel.updateSubtaskStatus(subtaskId, is_done)
-        .then(() => {
-          // После обновления подзадачи — пересчитываем статус родительской задачи
-          return taskController.updateStatusBySubtasks(parentTaskId, req, res);
-        });
-    })
-    .catch((err) => {
-      console.error('❌ Ошибка при обновлении подзадачи:', err);
-      res.status(500).json({ error: 'Ошибка при обновлении подзадачи' });
-    });
-};
-
-exports.updateSubtask = (req, res) => {
-  const subtaskId = Number(req.params.id);
-  const { title, position } = req.body;
-
-  if (typeof title !== 'string' || typeof position !== 'number') {
-    return res.status(400).json({
-      error: 'Неверные поля: title должен быть строкой, position — числом',
-    });
-  }
-
   subtaskModel
     .getSubtaskById(subtaskId)
     .then(([rows]) => {
@@ -150,9 +122,41 @@ exports.updateSubtask = (req, res) => {
 
       const parentTaskId = rows[0].parent_task_id;
 
-      return subtaskModel
-        .updateSubtask(subtaskId, title, position)
-        .then(() => taskController.getFullTaskById(parentTaskId));
+      // Обновляем статус подзадачи
+      return subtaskModel.updateSubtaskStatus(subtaskId, is_done).then(() => {
+        // После обновления подзадачи — пересчитываем статус родительской задачи
+        return taskController.updateStatusBySubtasks(parentTaskId, req, res);
+      });
+    })
+    .catch((err) => {
+      console.error('❌ Ошибка при обновлении подзадачи:', err);
+      res.status(500).json({ error: 'Ошибка при обновлении подзадачи' });
+    });
+};
+
+exports.updateSubtask = (req, res) => {
+  const subtaskId = Number(req.params.id);
+  const { title, position, parent_task_id } = req.body;
+
+  if (
+    typeof title !== 'string' ||
+    typeof position !== 'number' ||
+    typeof parent_task_id !== 'number'
+  ) {
+    return res.status(400).json({
+      error:
+        'Неверные поля: title должен быть строкой, position — числом, parent_task_id — числом',
+    });
+  }
+
+  subtaskModel
+    .updateSubtask(subtaskId, title, position)
+    .then(([result]) => {
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Подзадача не найдена' });
+      }
+
+      return taskController.getFullTaskById(parent_task_id);
     })
     .then((task) => {
       if (!task) {
@@ -160,6 +164,7 @@ exports.updateSubtask = (req, res) => {
           .status(404)
           .json({ error: 'Задача не найдена после обновления подзадачи' });
       }
+
       res.json(task);
     })
     .catch((err) => {

@@ -90,29 +90,51 @@ exports.createTask = (req, res) => {
 };
 
 // Обновление задачи
-exports.updateTask = (req, res) => {
+exports.updateTask = async (req, res) => {
   const taskId = Number(req.params.id);
+  const updatedTask = req.body;
 
-  taskModel
-    .updateTaskById(taskId, req.body)
-    .then(([result]) => {
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'Задача не найдена' });
+  try {
+    if (updatedTask.is_deleted) {
+      await taskModel.deleteTaskById(taskId);
+      return res.json({ message: '✅ Задача успешно удалена', id: taskId });
+    }
+
+    // Обновляем саму задачу
+    await taskModel.updateTaskById(taskId, updatedTask);
+
+    // Обрабатываем подзадачи
+    const subtaskPromises = updatedTask.subtasks.map((subtask) => {
+      if (!subtask.id && !subtask.is_deleted) {
+        // Новая подзадача
+        return subtaskModel.createSubtask({
+          ...subtask,
+          parent_task_id: taskId,
+        });
       }
-      return exports.getFullTaskById(taskId);
-    })
-    .then((fullTask) => {
-      if (!fullTask) {
-        return res
-          .status(404)
-          .json({ error: 'Задача не найдена после обновления' });
+
+      if (subtask.is_deleted) {
+        // Удаление существующей подзадачи
+        return subtaskModel.deleteSubtaskById(subtask.id);
       }
-      res.json(fullTask);
-    })
-    .catch((err) => {
-      console.error('❌ Ошибка при обновлении задачи:', err);
-      res.status(500).json({ error: err.message });
+
+      // Обновление существующей подзадачи
+      return subtaskModel.updateSubtask(
+        subtask.id,
+        subtask.title,
+        subtask.position,
+      );
     });
+
+    await Promise.all(subtaskPromises);
+    await taskController.updateStatusBySubtasks(taskId, req, res);
+    // Возвращаем обновлённую задачу
+    const fullTask = await taskController.getFullTaskById(taskId);
+    res.json(fullTask);
+  } catch (err) {
+    console.error('❌ Ошибка при обновлении задачи и подзадач:', err);
+    res.status(500).json({ error: 'Ошибка при обновлении задачи' });
+  }
 };
 
 // Обновление статуса is_done
@@ -140,11 +162,7 @@ exports.updateTaskStatus = async (req, res) => {
 
     // 3. Расчёт опыта на основе обновлённого статуса
     const deltaXP =
-      is_done == fullTask.is_done
-        ? 0
-        : is_done
-        ? fullTask.exp
-        : -fullTask.exp;
+      is_done == fullTask.is_done ? 0 : is_done ? fullTask.exp : -fullTask.exp;
     console.log(
       'начисленно опыта ' + deltaXP,
       'is_done ' + is_done,
