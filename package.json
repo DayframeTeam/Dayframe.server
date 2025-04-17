@@ -6,7 +6,8 @@
     "start": "node index.js",
     "init_db": "node src/scripts/initDb.js",
     "seed_db": "node src/scripts/seedInitialData.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "knip": "knip"
   },
   "repository": {
     "type": "git",
@@ -25,5 +26,10 @@
     "express": "^4.21.2",
     "mysql2": "^3.14.0",
     "nanoid": "^5.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "knip": "^5.50.5",
+    "typescript": "^5.8.3"
   }
 }

@@ -54,12 +54,11 @@ function updateSubtaskStatus(id, is_done) {
 }
 
 function updateSubtasksStatus(parentTaskId, isDone) {
-  return db.query(
-    `UPDATE subtasks SET is_done = ? WHERE parent_task_id = ?`,
-    [isDone, parentTaskId]
-  );
+  return db.query(`UPDATE subtasks SET is_done = ? WHERE parent_task_id = ?`, [
+    isDone,
+    parentTaskId,
+  ]);
 }
-
 
 function updateSubtask(id, title, position) {
   return db.query('UPDATE subtasks SET title = ?, position = ? WHERE id = ?', [
