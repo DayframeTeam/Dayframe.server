@@ -1,5 +1,5 @@
 // scripts/seedInitialData.js
-const db = require('../../config/db');
+const db = require('../config/db');
 
 ;(async () => {
   // 1) ESM-only nanoid через динамический import

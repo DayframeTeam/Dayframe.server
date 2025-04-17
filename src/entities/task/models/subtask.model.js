@@ -1,17 +1,17 @@
-const db = require('../config/db');
+const db = require('../../../config/db');
 
-exports.getSubtasksAllByUserId = (user_id) => {
+function getSubtasksAllByUserId(user_id) {
   const query = 'SELECT * FROM subtasks WHERE user_id = ?';
   return db.query(query, [user_id]);
-};
+}
 
-exports.getAllSubtasksByParentTaskId = (parent_task_id) => {
+function getAllSubtasksByParentTaskId(parent_task_id) {
   return db.query('SELECT * FROM subtasks WHERE parent_task_id = ?', [
     parent_task_id,
   ]);
-};
+}
 
-exports.addSubtask = (user_id, subtask) => {
+function addSubtask(user_id, subtask) {
   const {
     parent_task_id,
     title,
@@ -36,45 +36,66 @@ exports.addSubtask = (user_id, subtask) => {
     special_id,
     user_id,
   ]);
-};
+}
 
-exports.getSubtaskById = (id) => {
+function getSubtaskById(id) {
   return db.query('SELECT * FROM subtasks WHERE id = ?', [id]);
-};
+}
 
-exports.deleteSubtaskById = (id) => {
+function deleteSubtaskById(id) {
   return db.query('DELETE FROM subtasks WHERE id = ?', [id]);
-};
+}
 
-exports.updateSubtaskStatus = (id, is_done) => {
+function updateSubtaskStatus(id, is_done) {
   return db.query('UPDATE subtasks SET is_done = ? WHERE id = ?', [
     is_done,
     id,
   ]);
-};
+}
 
-exports.updateSubtask = (id, title, position) => {
+function updateSubtasksStatus(parentTaskId, isDone) {
+  return db.query(
+    `UPDATE subtasks SET is_done = ? WHERE parent_task_id = ?`,
+    [isDone, parentTaskId]
+  );
+}
+
+
+function updateSubtask(id, title, position) {
   return db.query('UPDATE subtasks SET title = ?, position = ? WHERE id = ?', [
     title,
     position,
     id,
   ]);
-};
+}
 
-exports.countAllSubtaskByParentTaskId = (parent_task_id) => {
+function countAllSubtaskByParentTaskId(parent_task_id) {
   const query = `
     SELECT COUNT(*) AS total
     FROM subtasks
     WHERE parent_task_id = ?
   `;
   return db.query(query, [parent_task_id]);
-};
+}
 
-exports.countCompletedSubtaskByParentTaskId = (parent_task_id) => {
+function countCompletedSubtaskByParentTaskId(parent_task_id) {
   const query = `
     SELECT COUNT(*) AS completed
     FROM subtasks
     WHERE parent_task_id = ? AND is_done = 1
   `;
   return db.query(query, [parent_task_id]);
+}
+
+module.exports = {
+  getSubtasksAllByUserId,
+  getAllSubtasksByParentTaskId,
+  addSubtask,
+  getSubtaskById,
+  deleteSubtaskById,
+  updateSubtaskStatus,
+  updateSubtask,
+  countAllSubtaskByParentTaskId,
+  countCompletedSubtaskByParentTaskId,
+  updateSubtasksStatus,
 };

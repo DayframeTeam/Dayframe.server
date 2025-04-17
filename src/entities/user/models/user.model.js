@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const db = require('../../../config/db');
 
 // Получить пользователя по ID
 exports.getUserById = async (userId) => {

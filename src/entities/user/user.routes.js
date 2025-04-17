@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const userController = require('../controllers/userController');
+const userController = require('./user.controller');
 
 // Получить данные текущего пользователя
-router.get('/me', userController.getCurrentUser);
+router.get('/me', (req, res) => userController.getCurrentUser(req, res));
 
 module.exports = router;

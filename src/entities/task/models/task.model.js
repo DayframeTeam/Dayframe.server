@@ -1,15 +1,23 @@
-const db = require('../config/db');
+const db = require('../../../config/db');
 
+/**
+ * Get all tasks for a specific user
+ * @param {number} user_id - User ID
+ */
 function getAllTasksByUser(user_id) {
   return db
     .query('SELECT * FROM tasks WHERE user_id = ?', [user_id])
     .then(([tasks]) => [tasks])
     .catch((error) => {
       console.error('Ошибка при получении задач:', error);
-      return [[]];
+      throw error; // Let the service layer handle the error
     });
 }
 
+/**
+ * Get a task by its ID
+ * @param {number} id - Task ID
+ */
 function getTaskById(id) {
   return db
     .query('SELECT * FROM tasks WHERE id = ?', [id])
@@ -19,10 +27,14 @@ function getTaskById(id) {
     })
     .catch((error) => {
       console.error('Ошибка при получении задачи:', error);
-      return [[]];
+      throw error; // Let the service layer handle the error
     });
 }
 
+/**
+ * Add a new task
+ * @param {Object} task - Task object
+ */
 function addTask(task) {
   const {
     title,
@@ -59,14 +71,28 @@ function addTask(task) {
   );
 }
 
+/**
+ * Delete a task by its ID
+ * @param {number} id - Task ID
+ */
 function deleteTaskById(id) {
   return db.query('DELETE FROM tasks WHERE id = ?', [id]);
 }
 
+/**
+ * Update a task's completion status
+ * @param {boolean} is_done - Task completion status
+ * @param {number} id - Task ID
+ */
 function setTaskStatus(is_done, id) {
   return db.query('UPDATE tasks SET is_done = ? WHERE id = ?', [is_done, id]);
 }
 
+/**
+ * Update a task by its ID
+ * @param {number} id - Task ID
+ * @param {Object} task - Task object with updated fields
+ */
 function updateTaskById(id, task) {
   const {
     title,

@@ -1,6 +1,5 @@
-const taskRoutes = require('../routes/tasks');
-const templateTasksRoutes = require('../routes/templateTasks');
-const userRoutes = require('../routes/userRoutes');
+const taskRoutes = require('../entities/task/task.routes');
+const userRoutes = require('../entities/user/user.routes');
 
 function registerRoutes(app) {
   app.use('/api/users', userRoutes);
