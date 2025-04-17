@@ -17,8 +17,12 @@ exports.addSubtask = (user_id, subtask) => {
     title,
     is_done = false,
     position = 0,
-    special_id = null,
+    special_id,
   } = subtask;
+
+  if (!special_id) {
+    throw new Error('special_id is required for subtasks');
+  }
 
   const query = `
       INSERT INTO subtasks (parent_task_id, title, is_done, position, special_id, user_id, created_at)

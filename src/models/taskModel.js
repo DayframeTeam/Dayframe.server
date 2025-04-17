@@ -26,35 +26,35 @@ function getTaskById(id) {
 function addTask(task) {
   const {
     title,
-    description,
-    status = false,
-    category,
-    priority,
+    description = null,
+    category = null,
+    priority = null, // 'low', 'medium', 'high'
     exp = 0,
-    duration,
-    start_time,
-    end_time,
-    task_date,
+    start_time = null,
+    end_time = null,
+    task_date = null,
     user_id,
+    special_id,
+    is_done = false,
   } = task;
 
   return db.query(
     `INSERT INTO tasks (
-      title, description, status, category, priority, exp,
-      duration, start_time, end_time, task_date, user_id
+      title, description, category, priority, exp,
+      start_time, end_time, user_id, special_id, is_done, task_date
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       title,
       description,
-      status,
       category,
       priority,
       exp,
-      duration,
       start_time,
       end_time,
-      task_date,
       user_id,
+      special_id,
+      is_done,
+      task_date,
     ],
   );
 }
@@ -73,25 +73,32 @@ function updateTaskById(id, task) {
     description,
     category,
     priority,
-    duration,
     start_time,
     end_time,
     task_date,
+    is_done,
   } = task;
 
   return db.query(
     `UPDATE tasks SET
-      title = ?, description = ?, category = ?, priority = ?, duration = ?, start_time = ?, end_time = ?, task_date = ?
+      title = ?, 
+      description = ?, 
+      category = ?, 
+      priority = ?, 
+      start_time = ?, 
+      end_time = ?, 
+      task_date = ?,
+      is_done = ?
      WHERE id = ?`,
     [
       title,
       description,
       category,
       priority,
-      duration,
       start_time,
       end_time,
       task_date,
+      is_done,
       id,
     ],
   );

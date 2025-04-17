@@ -95,11 +95,6 @@ exports.updateTask = async (req, res) => {
   const updatedTask = req.body;
 
   try {
-    if (updatedTask.is_deleted) {
-      await taskModel.deleteTaskById(taskId);
-      return res.json({ message: '✅ Задача успешно удалена', id: taskId });
-    }
-
     // Обновляем саму задачу
     await taskModel.updateTaskById(taskId, updatedTask);
 
