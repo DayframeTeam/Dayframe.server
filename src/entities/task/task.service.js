@@ -72,7 +72,30 @@ class TaskService {
     try {
       const task = { ...taskData, user_id: userId };
       const [result] = await taskModel.addTask(task);
-      const fullTask = await this.getFullTaskById(result.insertId);
+      const taskId = result.insertId;
+
+      // Создаем подзадачи, если они есть
+      const subtasks = taskData.subtasks ?? [];
+      const promises = [];
+
+      for (const sub of subtasks) {
+        // Добавляем только не удаленные подзадачи
+        if (!sub.is_deleted) {
+          promises.push(
+            subtaskModel.addSubtask(userId, {
+              ...sub,
+              parent_task_id: taskId,
+            }),
+          );
+        }
+      }
+
+      // Ждём, пока все операции над подзадачами завершатся
+      if (promises.length > 0) {
+        await Promise.all(promises);
+      }
+
+      const fullTask = await this.getFullTaskById(taskId);
 
       if (!fullTask) {
         return {
