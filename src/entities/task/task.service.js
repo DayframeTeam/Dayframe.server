@@ -88,42 +88,69 @@ class TaskService {
     }
   }
 
-  /**
-   * Update a task and its subtasks
-   */
   async updateTask(taskId, updatedTask) {
     try {
-      // Update the task itself
+      // 1) Обновляем саму задачу
       await taskModel.updateTaskById(taskId, updatedTask);
 
-      // Process subtasks
-      const subtaskPromises = updatedTask.subtasks.map((subtask) => {
-        if (!subtask.id && !subtask.is_deleted) {
-          // New subtask
-          return subtaskModel.addSubtask(updatedTask.user_id, {
-            ...subtask,
-            parent_task_id: taskId,
-          });
-        }
+      // 2) Готовим обработку подзадач
+      const subtasks = updatedTask.subtasks ?? [];
+      let needReopen = false;
+      const promises = [];
 
-        if (subtask.is_deleted) {
-          // Delete existing subtask
-          return subtaskModel.deleteSubtaskById(subtask.id);
-        }
+      for (const sub of subtasks) {
+        // новая подзадача
+        if (!sub.id && !sub.is_deleted) {
+          needReopen = true;
+          promises.push(
+            subtaskModel.addSubtask(updatedTask.user_id, {
+              ...sub,
+              parent_task_id: taskId,
+            }),
+          );
 
-        // Update existing subtask
-        return subtaskModel.updateSubtask(
-          subtask.id,
-          subtask.title,
-          subtask.position,
+          // удаление подзадачи
+        } else if (sub.id && sub.is_deleted) {
+          promises.push(subtaskModel.deleteSubtaskById(sub.id));
+
+          // обновление существующей подзадачи
+        } else if (sub.id) {
+          promises.push(
+            subtaskModel.updateSubtask(sub.id, sub.title, sub.position),
+          );
+        }
+      }
+
+      // 3) Ждём, пока все операции над подзадачами завершатся
+      await Promise.all(promises);
+
+      // 4) Если добавили хоть одну новую — переоткрываем задачу
+      if (needReopen) {
+        const result = await this.updateTaskStatus(
+          taskId,
+          false,
+          updatedTask.user_id,
         );
-      });
 
-      await Promise.all(subtaskPromises);
-      return { status: 200 };
+        return {
+          status: 200,
+          data: result.data,
+        };
+      }
+
+      // 5) Если ничего «статусного» не меняли, получаем и возвращаем обновленную задачу
+      const updatedFullTask = await this.getFullTaskById(taskId);
+
+      return {
+        status: 200,
+        data: {
+          task: updatedFullTask,
+          userExp: undefined,
+        },
+      };
     } catch (err) {
       console.error('❌ Ошибка при обновлении задачи и подзадач:', err);
-      return { status: 500, data: { error: 'Ошибка при обновлении задачи' } };
+      return { status: 500, data: { error: err.message } };
     }
   }
 

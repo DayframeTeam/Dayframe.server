@@ -64,17 +64,6 @@ class TaskController {
 
     try {
       const result = await taskService.updateTask(taskId, updatedTask);
-
-      // If we need to recalculate task status based on subtasks
-      await taskService.updateStatusBySubtasks(taskId, userId);
-
-      const fullTask = await taskService.getFullTaskById(taskId);
-      if (!fullTask) {
-        return res
-          .status(404)
-          .json({ error: 'Задача не найдена после обновления подзадачи' });
-      }
-
       res.status(result.status).json(result.data);
     } catch (err) {
       console.error('❌ Ошибка при обновлении задачи и подзадач:', err);
