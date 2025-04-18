@@ -60,12 +60,22 @@ class TaskController {
   async updateTask(req, res) {
     const taskId = Number(req.params.id);
     const updatedTask = req.body;
+    const userId = Number(req.headers['user-id']);
 
     try {
       const result = await taskService.updateTask(taskId, updatedTask);
 
       // If we need to recalculate task status based on subtasks
-      await taskService.updateStatusBySubtasks(taskId, req, res);
+      await taskService.updateStatusBySubtasks(taskId, userId);
+
+      const fullTask = await taskService.getFullTaskById(taskId);
+      if (!fullTask) {
+        return res
+          .status(404)
+          .json({ error: 'Задача не найдена после обновления подзадачи' });
+      }
+
+      res.status(result.status).json(result.data);
     } catch (err) {
       console.error('❌ Ошибка при обновлении задачи и подзадач:', err);
       res.status(500).json({ error: 'Ошибка при обновлении задачи' });
@@ -76,6 +86,7 @@ class TaskController {
    * Update subtask completion status
    */
   async updateSubtaskStatus(req, res) {
+    const userId = Number(req.headers['user-id']);
     const subtaskId = Number(req.params.id);
     const { is_done } = req.body;
 
@@ -91,48 +102,13 @@ class TaskController {
       const subtaskResult = await taskService.updateSubtaskStatus(
         subtaskId,
         is_done,
+        userId,
       );
-
-      if (subtaskResult.status !== 200) {
-        return res.status(subtaskResult.status).json(subtaskResult.data);
-      }
-
-      // Get the parent task ID
-      const parentTaskId = subtaskResult.parentTaskId;
-
-      // Recalculate task status based on subtasks
-      await this.updateStatusBySubtasks(parentTaskId, req, res);
+      res.status(subtaskResult.status).json(subtaskResult.data);
     } catch (err) {
       console.error('❌ Ошибка при обновлении подзадачи:', err);
       res.status(500).json({ error: 'Ошибка при обновлении подзадачи' });
     }
-  }
-
-  /**
-   * Update subtask details
-   */
-  async updateSubtask(req, res) {
-    const subtaskId = Number(req.params.id);
-    const { title, position, parent_task_id } = req.body;
-
-    if (
-      typeof title !== 'string' ||
-      typeof position !== 'number' ||
-      typeof parent_task_id !== 'number'
-    ) {
-      return res.status(400).json({
-        error:
-          'Неверные поля: title должен быть строкой, position — числом, parent_task_id — числом',
-      });
-    }
-
-    const result = await taskService.updateSubtask(
-      subtaskId,
-      title,
-      position,
-      parent_task_id,
-    );
-    res.status(result.status).json(result.data);
   }
 }
 

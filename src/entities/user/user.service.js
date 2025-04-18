@@ -65,7 +65,7 @@ class UserService {
     // }
 
     try {
-      const [result] = await userModel.setUserExp(userId, exp);
+      const [result] = await userModel.updateUserExp(userId, exp);
 
       if (result.affectedRows === 0) {
         return null;

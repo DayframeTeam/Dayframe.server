@@ -20,9 +20,6 @@ router.patch('/is_done/:id', authorizeTask, (req, res) => taskController.updateT
 router.patch('/:id', authorizeTask, (req, res) => taskController.updateTask(req, res));
 
 // Отметить подзадачу как выполненную
-router.patch('/subtasks/:id', authorizeSubTask, (req, res) =>taskController.updateSubtaskStatus(req, res));
-
-// Обновить данные подзадачи
-router.patch('/subtasks/update/:id', authorizeSubTask, (req, res) => taskController.updateSubtask(req, res));
+router.patch('/subtasks/:id', authorizeSubTask, (req, res) => taskController.updateSubtaskStatus(req, res));
 
 module.exports = router;

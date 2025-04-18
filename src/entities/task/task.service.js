@@ -13,7 +13,11 @@ class TaskService {
     try {
       const [rows] = await taskModel.getTaskById(taskId);
       const task = rows[0];
-      if (!task) return null;
+      if (!task)
+        return {
+          status: 404,
+          data: { error: 'Не удалось получить задачу' },
+        };
 
       const [subtasks] = await subtaskModel.getAllSubtasksByParentTaskId(
         taskId,
@@ -27,39 +31,6 @@ class TaskService {
       // Return null instead of throwing to avoid cascading failures
       // Service will handle null returns gracefully
       return null;
-    }
-  }
-
-  /**
-   * Update parent task status based on subtasks completion
-   */
-  async updateStatusBySubtasks(parent_task_id, req, res) {
-    try {
-      const [[rowsTotal], [rowsCompleted]] = await Promise.all([
-        subtaskModel.countAllSubtaskByParentTaskId(parent_task_id),
-        subtaskModel.countCompletedSubtaskByParentTaskId(parent_task_id),
-      ]);
-
-      const total = Number(rowsTotal[0]?.total || 0);
-      const completed = Number(rowsCompleted[0]?.completed || 0);
-
-      const newStatus = total > 0 && total === completed;
-      console.log({ total, completed, newStatus });
-
-      // Create a fake request to reuse updateTaskStatus
-      const fakeReq = {
-        ...req,
-        params: { id: parent_task_id },
-        body: { is_done: newStatus },
-      };
-
-      return this.updateTaskStatus(fakeReq, res);
-    } catch (err) {
-      console.error(
-        '❌ Ошибка при пересчёте статуса задачи по подзадачам:',
-        err,
-      );
-      res.status(500).json({ error: 'Ошибка при обновлении статуса задачи' });
     }
   }
 
@@ -161,54 +132,48 @@ class TaskService {
    */
   async updateTaskStatus(taskId, is_done, userId) {
     try {
-      // Update task status
-      const [updateResult] = await taskModel.setTaskStatus(is_done, taskId);
-      if (updateResult.affectedRows === 0) {
-        return {
-          status: 404,
-          data: { error: 'Задача не найдена для обновления' },
-        };
-      }
-
       // Get full task
       const fullTask = await this.getFullTaskById(taskId);
-      if (!fullTask) {
-        return {
-          status: 404,
-          data: { error: 'Не удалось получить полную задачу' },
-        };
+      if (fullTask.is_done === is_done) {
+        return { status: 200, data: { task: undefined, userExp: undefined } };
       }
 
-      // Update all subtasks to match the parent task status
-      if (fullTask.subtasks?.length) {
-        await subtaskModel.updateSubtasksStatus(taskId, is_done);
+      // Update task status
+      await taskModel.setTaskStatus(is_done, taskId);
+
+      if (is_done) {
+        // задача выполненна, начисляем опыт
+        fullTask.exp > 0 &&
+          (await userService.updateUserExp(userId, fullTask.exp));
+        // выполняем все подзадачи
+        fullTask.subtasks &&
+          (await subtaskModel.updateSubtasksStatusByParentTaskId(
+            fullTask.id,
+            is_done,
+          ));
+      } else {
+        // задача не выполненна, снимаем опыт
+        fullTask.exp > 0 &&
+          (await userService.updateUserExp(userId, -fullTask.exp));
       }
-
-      if (fullTask.exp !== 0) {
-        // Calculate XP delta based on updated status
-        // const deltaXP =
-        //   is_done == fullTask.is_done
-        //     ? 0
-        //     : is_done
-        //     ? fullTask.exp
-        //     : -fullTask.exp;
-
-        const deltaXP = fullTask.is_done ? fullTask.exp : -fullTask.exp;
-        await userService.updateUserExp(userId, deltaXP);
-        console.log(
-          'начисленно опыта ' + deltaXP,
-          //   'is_done ' + is_done,
-          //   'fullTask.is_done ' + fullTask.is_done,
-        );
-      }
-
-      // 4. Мутируем объект, чтобы не дергать БД ещё раз
-      if (fullTask.subtasks) {
-        fullTask.subtasks.forEach((s) => (s.is_done = is_done));
-      }
-
-      // 5. Возвращаем уже мутированный объект
-      return { status: 200, data: fullTask };
+      //   if (fullTask.exp !== 0) {
+      //     // Calculate XP delta based on updated status
+      //     const deltaXP =
+      //       is_done == fullTask.is_done
+      //         ? 0
+      //         : is_done
+      //         ? fullTask.exp
+      //         : -fullTask.exp;
+      //     await userService.updateUserExp(userId, deltaXP);
+      //     console.log(
+      //       'начисленно опыта ' + deltaXP,
+      //       'is_done ' + is_done,
+      //       'fullTask.is_done ' + fullTask.is_done,
+      //     );
+      //   }
+      const newTask = await this.getFullTaskById(taskId);
+      const newUser = await userService.getUserById(userId);
+      return { status: 200, data: { task: newTask, userExp: newUser.exp } };
     } catch (err) {
       console.error('❌ Ошибка при обновлении статуса задачи:', err);
       return { status: 500, data: { error: err.message } };
@@ -240,7 +205,7 @@ class TaskService {
   /**
    * Update a subtask's status
    */
-  async updateSubtaskStatus(subtaskId, is_done) {
+  async updateSubtaskStatus(subtaskId, is_done, userId) {
     try {
       // Get the subtask by ID
       const [rows] = await subtaskModel.getSubtaskById(subtaskId);
@@ -248,17 +213,34 @@ class TaskService {
         return { status: 404, data: { error: 'Подзадача не найдена' } };
       }
 
-      const parentTaskId = rows[0].parent_task_id;
+      if (rows[0].is_done === is_done) {
+        return { status: 200, data: { task: undefined, userExp: undefined } };
+      }
 
       // Update subtask status
       await subtaskModel.updateSubtaskStatus(subtaskId, is_done);
 
-      // Return the parent task ID for recalculating task status
-      return {
-        status: 200,
-        data: { parentTaskId },
-        parentTaskId,
-      };
+      const fullTask = await this.getFullTaskById(rows[0].parent_task_id);
+
+      const [[rowsTotal], [rowsCompleted]] = await Promise.all([
+        subtaskModel.countAllSubtaskByParentTaskId(fullTask.id),
+        subtaskModel.countCompletedSubtaskByParentTaskId(fullTask.id),
+      ]);
+
+      const total = Number(rowsTotal[0]?.total || 0);
+      const completed = Number(rowsCompleted[0]?.completed || 0);
+
+      let result;
+
+      if (completed === total) {
+        result = await this.updateTaskStatus(fullTask.id, true, userId);
+      } else if (completed === total - 1) {
+        result = await this.updateTaskStatus(fullTask.id, false, userId);
+      } else {
+        return { status: 200, data: { task: fullTask, userExp: undefined } };
+      }
+
+      return result;
     } catch (err) {
       console.error('❌ Ошибка при обновлении подзадачи:', err);
       return {

@@ -53,10 +53,10 @@ function updateSubtaskStatus(id, is_done) {
   ]);
 }
 
-function updateSubtasksStatus(parentTaskId, isDone) {
+function updateSubtasksStatusByParentTaskId(parent_task_id, is_done) {
   return db.query(`UPDATE subtasks SET is_done = ? WHERE parent_task_id = ?`, [
-    isDone,
-    parentTaskId,
+    is_done,
+    parent_task_id,
   ]);
 }
 
@@ -96,5 +96,5 @@ module.exports = {
   updateSubtask,
   countAllSubtaskByParentTaskId,
   countCompletedSubtaskByParentTaskId,
-  updateSubtasksStatus,
+  updateSubtasksStatusByParentTaskId,
 };
