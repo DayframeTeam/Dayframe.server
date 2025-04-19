@@ -6,6 +6,9 @@
     "start": "node index.js",
     "init_db": "node src/scripts/initDb.js",
     "seed_db": "node src/scripts/seedInitialData.js",
+    "create_env": "node -e \"require('fs').copyFileSync('.env.example', '.env'); console.log('✅ .env создан из шаблона .env.example. Пожалуйста, отредактируйте файл .env перед продолжением.')\"",
+    "setup": "npm run create_env",
+    "db_setup": "npm run init_db && npm run seed_db",
     "test": "echo \"Error: no test specified\" && exit 1",
     "knip": "knip"
   },
