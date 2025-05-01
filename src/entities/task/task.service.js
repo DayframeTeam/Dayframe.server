@@ -180,7 +180,7 @@ class TaskService {
   /**
    * Update task completion status
    */
-  async updateTaskStatus(taskId, is_done, userId) {
+  async updateTaskStatus(taskId, is_done, userId, completion_date) {
     try {
       // Get full task
       const fullTask = await this.getFullTaskById(taskId);
@@ -190,6 +190,9 @@ class TaskService {
 
       // Update task status
       await taskModel.setTaskStatus(is_done, taskId);
+      if (!fullTask.task_date) {
+        await taskModel.setTaskDate(completion_date, taskId);
+      }
 
       if (is_done) {
         // задача выполненна, начисляем опыт

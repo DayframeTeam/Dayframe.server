@@ -88,6 +88,10 @@ function setTaskStatus(is_done, id) {
   return db.query('UPDATE tasks SET is_done = ? WHERE id = ?', [is_done, id]);
 }
 
+function setTaskDate(task_date, id) {
+  return db.query('UPDATE tasks SET task_date = ? WHERE id = ?', [task_date, id]);
+}
+
 /**
  * Update a task by its ID
  * @param {number} id - Task ID
@@ -136,5 +140,6 @@ module.exports = {
   addTask,
   deleteTaskById,
   setTaskStatus,
+  setTaskDate,
   updateTaskById,
 };

@@ -47,10 +47,10 @@ class TaskController {
    */
   async updateTaskStatus(req, res) {
     const taskId = Number(req.params.id);
-    const { is_done } = req.body;
+    const { is_done, completion_date } = req.body;
     const userId = Number(req.headers['user-id']);
 
-    const result = await taskService.updateTaskStatus(taskId, is_done, userId);
+    const result = await taskService.updateTaskStatus(taskId, is_done, userId, completion_date);
     res.status(result.status).json(result.data);
   }
 
