@@ -42,6 +42,19 @@ class TemplateTaskController {
       res.status(500).json({ error: 'Ошибка при обновлении шаблона задачи' });
     }
   }
+
+  async toggleActiveTemplateTask(req, res) {
+    const taskId = Number(req.params.id);
+    const is_active = req.body.is_active;
+
+    try {
+      const result = await templateTaskService.toggleActiveTemplateTask(taskId, is_active);
+      res.status(result.status).json(result.data);
+    } catch (err) {
+      console.error('❌ Ошибка при обновлении активности шаблона задачи и подзадач:', err);
+      res.status(500).json({ error: 'Ошибка при обновлении активности шаблона задачи' });
+    }
+  }
 }
 
 module.exports = new TemplateTaskController();

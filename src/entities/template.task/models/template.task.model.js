@@ -21,7 +21,7 @@ function createTemplateTask(templateTask) {
     created_at,
     special_id,
     is_active = true,
-    repeat_rule = [],           // по умолчанию массив
+    repeat_rule = [], // по умолчанию массив
     start_active_date,
     end_active_date,
   } = templateTask;
@@ -50,12 +50,11 @@ function createTemplateTask(templateTask) {
     created_at,
     special_id,
     is_active,
-    repeatRuleJson,            // <-- здесь JSON вместо массива
+    repeatRuleJson, // <-- здесь JSON вместо массива
     start_active_date,
     end_active_date,
   ]);
 }
-
 
 function deleteTemplateTaskById(id) {
   return db.query('DELETE FROM template_tasks WHERE id = ?', [id]);
@@ -106,10 +105,18 @@ function updateTemplateTaskById(id, updatedTask) {
   );
 }
 
+function updateTemplateTaskActive(id, is_active) {
+  return db.query('UPDATE template_tasks SET is_active = ? WHERE id = ?', [
+    is_active,
+    id,
+  ]);
+}
+
 module.exports = {
   getTemplateTaskById,
   getAllTemplateTasksByUser,
   createTemplateTask,
   deleteTemplateTaskById,
   updateTemplateTaskById,
+  updateTemplateTaskActive,
 };

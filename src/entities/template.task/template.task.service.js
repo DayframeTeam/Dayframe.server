@@ -174,6 +174,22 @@ class TemplateTaskService {
       return { status: 500, data: { error: err.message } };
     }
   }
+
+  async toggleActiveTemplateTask(taskId, is_active) {
+    try {
+      await templateTaskModel.updateTemplateTaskActive(taskId, is_active);
+      const updatedFullTask = await this.getFullTemplateTaskById(taskId);
+      return {
+        status: 200,
+        data: {
+          task: updatedFullTask,
+        },
+      };
+    } catch (err) {
+      console.error('❌ Ошибка при обновлении шаблона задачи и подзадач:', err);
+      return { status: 500, data: { error: err.message } };
+    }
+  }
 }
 
 // Create a singleton instance

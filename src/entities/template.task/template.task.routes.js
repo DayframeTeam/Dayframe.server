@@ -7,5 +7,5 @@ router.get('/', (req, res) => templateTaskController.getTemplateTasksWithSubTask
 router.post('/', (req, res) => templateTaskController.createTemplateTask(req, res));
 router.delete('/:id', (req, res) => templateTaskController.deleteTemplateTask(req, res));
 router.patch('/:id', (req, res) => templateTaskController.updateTemplateTask(req, res));
-
+router.patch('/:id/set_active', (req, res) => templateTaskController.toggleActiveTemplateTask(req, res));
 module.exports = router;
