@@ -95,16 +95,36 @@ class TaskService {
         await Promise.all(promises);
       }
 
-      const fullTask = await this.getFullTaskById(taskId);
+      if (taskData.is_done) {
+        return await this.updateTaskStatus(taskId, true, userId);
+      }
 
-      if (!fullTask) {
+      if (!taskData.is_done && Array.isArray(taskData.subtasks)) {
+        // фильтруем реально созданные (не удалённые)
+        const subs = taskData.subtasks.filter((sub) => !sub.is_deleted);
+
+        const totalCount = subs.length;
+        const completedCount = subs.filter((sub) => sub.is_done).length;
+
+        // если есть хотя бы 1 подзадача и все они выполнены
+        if (totalCount > 0 && totalCount === completedCount) {
+          // помечаем саму задачу выполненной
+          return await this.updateTaskStatus(taskId, true, userId);
+        }
+      }
+
+      const newTask = await this.getFullTaskById(taskId);
+      const newUser = await userService.getUserById(userId);
+      // 2 проверка на выполнение всех подзадач
+
+      if (!newTask) {
         return {
           status: 404,
           data: { error: 'Задача не найдена после создания' },
         };
       }
 
-      return { status: 201, data: fullTask };
+      return { status: 200, data: { task: newTask, userExp: newUser.exp } };
     } catch (err) {
       console.error('❌ Ошибка при создании задачи:', err);
       return { status: 500, data: { error: err.message } };
@@ -208,6 +228,11 @@ class TaskService {
         // задача не выполненна, снимаем опыт
         fullTask.exp > 0 &&
           (await userService.updateUserExp(userId, -fullTask.exp));
+          fullTask.subtasks &&
+          (await subtaskModel.updateSubtasksStatusByParentTaskId(
+            fullTask.id,
+            is_done,
+          ));
       }
       //   if (fullTask.exp !== 0) {
       //     // Calculate XP delta based on updated status
