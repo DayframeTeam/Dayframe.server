@@ -2,7 +2,7 @@ const db = require('../config/db');
 
 function authorizeSubTask(req, res, next) {
   const id = req.params.id;
-  const user_id = Number(req.headers['user-id']);
+  const user_id = Number(req.user.id);
 
   if (!user_id) {
     return res.status(400).json({ error: 'Не передан user-id в заголовке' });

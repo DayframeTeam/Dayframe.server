@@ -8,7 +8,7 @@ class TaskController {
    * Get all tasks with their subtasks for a user
    */
   getTasksWithSubTasks(req, res) {
-    const userId = Number(req.headers['user-id']);
+    const userId = Number(req.user.id);
     if (!userId) {
       return res.status(400).json({ error: 'Не передан user-id в заголовке' });
     }
@@ -22,7 +22,7 @@ class TaskController {
    * Create a new task
    */
   createTask(req, res) {
-    const userId = Number(req.headers['user-id']);
+    const userId = Number(req.user.id);
     if (!userId)
       return res.status(400).json({ error: 'Не передан user-id в заголовке' });
 
@@ -48,7 +48,7 @@ class TaskController {
   async updateTaskStatus(req, res) {
     const taskId = Number(req.params.id);
     const { is_done, completion_date } = req.body;
-    const userId = Number(req.headers['user-id']);
+    const userId = Number(req.user.id);
 
     const result = await taskService.updateTaskStatus(taskId, is_done, userId, completion_date);
     res.status(result.status).json(result.data);
@@ -60,7 +60,7 @@ class TaskController {
   async updateTask(req, res) {
     const taskId = Number(req.params.id);
     const updatedTask = req.body;
-    const userId = Number(req.headers['user-id']);
+    const userId = Number(req.user.id);
 
     try {
       const result = await taskService.updateTask(taskId, updatedTask);
@@ -75,7 +75,7 @@ class TaskController {
    * Update subtask completion status
    */
   async updateSubtaskStatus(req, res) {
-    const userId = Number(req.headers['user-id']);
+    const userId = Number(req.user.id);
     const subtaskId = Number(req.params.id);
     const { is_done } = req.body;
 

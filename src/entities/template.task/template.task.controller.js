@@ -2,7 +2,7 @@ const templateTaskService = require('./template.task.service');
 
 class TemplateTaskController {
   getTemplateTasksWithSubTasks(req, res) {
-    const userId = Number(req.headers['user-id']);
+    const userId = Number(req.user.id);
     if (!userId) {
       return res.status(400).json({ error: 'Не передан user-id в заголовке' });
     }
@@ -13,7 +13,7 @@ class TemplateTaskController {
   }
 
   createTemplateTask(req, res) {
-    const userId = Number(req.headers['user-id']);
+    const userId = Number(req.user.id);
     if (!userId)
       return res.status(400).json({ error: 'Не передан user-id в заголовке' });
 

@@ -3,23 +3,24 @@ const router = express.Router();
 const taskController = require('./task.controller');
 const authorizeTask = require('../../middleware/authorizeTask');
 const authorizeSubTask = require('../../middleware/authorizeSubTask');
+const authenticate = require('../../middleware/authenticate');
 
 // Получить все задачи по id пользователя
-router.get('/', (req, res) => taskController.getTasksWithSubTasks(req, res));
+router.get('/', authenticate, (req, res) => taskController.getTasksWithSubTasks(req, res));
 
 // Добавить новую задачу
-router.post('/', (req, res) => taskController.createTask(req, res));
+router.post('/', authenticate, (req, res) => taskController.createTask(req, res));
 
 // Удалить задачу
-router.delete('/:id', authorizeTask, (req, res) => taskController.deleteTask(req, res));
+router.delete('/:id', authenticate, authorizeTask, (req, res) => taskController.deleteTask(req, res));
 
 // Отметить задачу как выполненную
-router.patch('/is_done/:id', authorizeTask, (req, res) => taskController.updateTaskStatus(req, res));
+router.patch('/is_done/:id', authenticate, authorizeTask, (req, res) => taskController.updateTaskStatus(req, res));
 
 // 🔄 Обновить задачу
-router.patch('/:id', authorizeTask, (req, res) => taskController.updateTask(req, res));
+router.patch('/:id', authenticate, authorizeTask, (req, res) => taskController.updateTask(req, res));
 
 // Отметить подзадачу как выполненную
-router.patch('/subtasks/:id', authorizeSubTask, (req, res) => taskController.updateSubtaskStatus(req, res));
+router.patch('/subtasks/:id', authenticate, authorizeSubTask, (req, res) => taskController.updateSubtaskStatus(req, res));
 
 module.exports = router;

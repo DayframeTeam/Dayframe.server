@@ -7,7 +7,7 @@ const createUsersTable = () => {
       username VARCHAR(100) NOT NULL,
       email VARCHAR(191) DEFAULT NULL,
       password VARCHAR(255) NOT NULL,
-      telegram_id BIGINT DEFAULT NULL,
+      chat_id BIGINT DEFAULT NULL,
       is_premium BOOLEAN DEFAULT FALSE,
       user_categories TEXT DEFAULT NULL,
       exp INT DEFAULT 0,
