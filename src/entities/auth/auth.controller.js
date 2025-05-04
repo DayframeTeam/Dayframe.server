@@ -3,7 +3,7 @@ const userService = require('../user/user.service.js');
 
 class AuthController {
   async webappLogin(req, res) {
-    const { chat_id } = req.params;
+    const chat_id = Number(req.params.chat_id);
     console.log('🔑 chat_id', chat_id);
     // Находим или создаём пользователя по chatId
     //    В userService.getOrCreateByChatId должны возвращать объект
