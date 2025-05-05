@@ -94,6 +94,38 @@ class UserService {
     }
   }
 
+  async parseInitData(initDataString) {
+    const params = new URLSearchParams(initDataString);
+    const result = {};
+
+    for (const [rawKey, rawValue] of params.entries()) {
+      if (rawKey === 'hash') continue;
+
+      if (rawKey === 'user') {
+        // Обрабатываем user как JSON
+        result.user = JSON.parse(rawValue);
+      } else {
+        // Обрабатываем остальные поля как обычно
+        const keys = rawKey.split('.');
+        let cursor = result;
+
+        keys.forEach((key, idx) => {
+          if (idx === keys.length - 1) {
+            const num = Number(rawValue);
+            cursor[key] = String(num) === rawValue ? num : rawValue;
+          } else {
+            if (cursor[key] == null) {
+              cursor[key] = {};
+            }
+            cursor = cursor[key];
+          }
+        });
+      }
+    }
+
+    return result;
+  }
+
   async getUserByChatId(chat_id) {
     try {
       const [rows] = await userModel.getUserByChatId(chat_id);
@@ -108,15 +140,15 @@ class UserService {
     }
   }
 
-  async registerUser(chat_id) {
+  async registerUser(initData) {
     try {
       const newUser = {
-        username: 'newUser',
-        password: 'newUser',
-        chat_id: chat_id,
+        username: initData.user.first_name,
+        password: 'password',
+        chat_id: initData.user.id,
       };
       await userModel.registerUser(newUser);
-      const user = await this.getUserByChatId(chat_id);
+      const user = await this.getUserByChatId(initData.user.id);
       return user;
     } catch (error) {
       console.error('Error in registerUser service:', error);
@@ -124,11 +156,12 @@ class UserService {
     }
   }
 
-  async getOrCreateByChatId(chat_id) {
+  async getOrCreateByChatId(initData) {
     try {
-      const user = await this.getUserByChatId(chat_id);
+      const parsedInitData = await this.parseInitData(initData);
+      const user = await this.getUserByChatId(parsedInitData.user.id);
       if (!user) {
-        const newUser = await this.registerUser(chat_id);
+        const newUser = await this.registerUser(parsedInitData);
         return { status: 200, data: newUser };
       }
       return { status: 200, data: user };

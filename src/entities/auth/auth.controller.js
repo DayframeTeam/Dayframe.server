@@ -1,15 +1,16 @@
 const { signToken } = require('./jwt.js');
 const userService = require('../user/user.service.js');
+const authService = require('./auth.service.js');
 
 class AuthController {
   async webappLogin(req, res) {
-    const chat_id = Number(req.params.chat_id);
-    console.log('🔑 chat_id', chat_id);
-    // Находим или создаём пользователя по chatId
-    //    В userService.getOrCreateByChatId должны возвращать объект
-    //    { id: <user.id>, chatId: <telegram chat id>, ... }
-    const { status, data } = await userService.getOrCreateByChatId(chat_id);
+    const { initData } = req.body;
 
+    const { valid } = await authService.validateInitData(initData);
+    if (!valid) {
+      return res.status(400).json({ valid: false, error: 'initData missing' });
+    }
+    const { status, data } = await userService.getOrCreateByChatId(initData);
     if (status !== 200) {
       return res.status(status).json(data);
     }

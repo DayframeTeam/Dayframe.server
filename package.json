@@ -1,9 +1,9 @@
 {
   "name": "dayframe-server",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "hello.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node hello.js",
     "init_db": "node src/scripts/initDb.js",
     "seed_db": "node src/scripts/seedInitialData.js",
     "create_env": "node -e \"require('fs').copyFileSync('.env.example', '.env'); console.log('✅ .env создан из шаблона .env.example. Пожалуйста, отредактируйте файл .env перед продолжением.')\"",
