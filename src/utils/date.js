@@ -11,7 +11,7 @@ function getDateStringInTZ(timeZone) {
     day: '2-digit',
   }).format(now); // "2025-11-20"
   // переводим в ваш формат
-  return parts.replace(/-/g, '.'); // "2025.11.20"
+  return parts;
 }
 
 module.exports = { getDateStringInTZ };
