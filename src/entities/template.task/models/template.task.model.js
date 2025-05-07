@@ -113,10 +113,12 @@ function updateTemplateTaskActive(id, is_active) {
 }
 
 function getTemplatesForDay(user_id, dayOfWeek) {
-  // 1) «daily» в вашем хранилище — это JSON.stringify('daily') === "\"daily\""
-  const dailyJson = JSON.stringify('daily');       // -> "\"daily\""
-  // 2) Паттерн для поиска числа в массиве: "%\"3\"%" для dayOfWeek = 3
-  const likeDow   = `%\"${dayOfWeek}\"%`;          
+  // 1) JSON для «каждый день» — массив 1..7
+  const fullWeekJson = JSON.stringify([1, 2, 3, 4, 5, 6, 7]); // -> "[1,2,3,4,5,6,7]"
+
+  // 2) Паттерн для поиска dayOfWeek внутри JSON-массива
+  const dowJson = JSON.stringify(dayOfWeek); // -> "3" если день = 3
+  const likeDow = `%${dowJson}%`; // -> '%"3"%'
 
   const sql = `
     SELECT *
@@ -124,12 +126,14 @@ function getTemplatesForDay(user_id, dayOfWeek) {
      WHERE user_id   = ?
        AND is_active = 1
        AND (
+            -- «каждый день»
             repeat_rule = ?
+            -- либо этот день есть в массиве
          OR repeat_rule LIKE ?
        )
   `;
 
-  return db.query(sql, [user_id, dailyJson, likeDow]);
+  return db.query(sql, [user_id, fullWeekJson, likeDow]);
 }
 
 module.exports = {
