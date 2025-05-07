@@ -11,7 +11,7 @@ const createUsersTable = () => {
       is_premium BOOLEAN DEFAULT FALSE,
       user_categories TEXT DEFAULT NULL,
       exp INT DEFAULT 0,
-      timezone VARCHAR(64) NOT NULL DEFAULT 'UTC',
+      timezone VARCHAR(64) NOT NULL DEFAULT 'Europe/Moscow',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;

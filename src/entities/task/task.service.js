@@ -366,7 +366,7 @@ class TaskService {
    * @param {string} userId
    * @param {string} timeZone — IANA-имя зоны, например "Europe/Moscow"
    */
-  async getTasksForToday(userId, timeZone = 'UTC') {
+  async getTasksForToday(userId, timeZone = 'Europe/Moscow') {
     try {
       const dateString = getDateStringInTZ(timeZone);
       const [tasks] = await taskModel.getTasksForToday(userId, dateString);

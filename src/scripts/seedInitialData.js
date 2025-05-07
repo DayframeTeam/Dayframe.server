@@ -12,7 +12,7 @@ const db = require('../config/db');
       INSERT IGNORE INTO users
         (id, username, email, password, timezone)
       VALUES
-        (1, 'demo_user', 'demo@example.com', 'password123', 'UTC')
+        (1, 'demo_user', 'demo@example.com', 'password123', 'Europe/Moscow')
       `
     );
     console.log('✅ Пользователь id=1 создан (или уже существует)');
