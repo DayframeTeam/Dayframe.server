@@ -1,6 +1,8 @@
 const taskModel = require('./models/task.model');
 const subtaskModel = require('./models/subtask.model');
 const userService = require('../user/user.service');
+const { utcToZonedTime, format } = require('date-fns-tz');
+const templateModel = require('../template.task/models/template.task.model');
 
 /**
  * Task service class with business logic for task operations
@@ -357,6 +359,34 @@ class TaskService {
         status: 500,
         data: { error: 'Ошибка при обновлении подзадачи' },
       };
+    }
+  }
+
+  /**
+   * @param {string} userId
+   * @param {string} timeZone — IANA-имя зоны, например "Europe/Moscow"
+   */
+  async getTasksForToday(userId, timeZone = 'UTC') {
+    try {
+      // 1) конвертируем сейчас в локальный момент пользователя
+      const now = new Date();
+      const localDate = utcToZonedTime(now, timeZone);
+
+      // 2) получаем строку для обычных задач
+      const dateString = format(localDate, 'yyyy.MM.dd', { timeZone });
+      const tasks = await taskModel.getTasksForToday(userId, dateString);
+
+      // 3) считаем dayOfWeek: JS: 0=ВС,1=ПН…6=СБ → 1=ПН…7=ВС
+      const jsDay = localDate.getDay();
+      const dayOfWeek = jsDay === 0 ? 7 : jsDay;
+
+      // 4) забираем шаблоны, у которых repeat_rule=daily ИЛИ массив содержит этот день
+      const templates = await templateModel.getTemplatesForDay(userId, dayOfWeek);
+
+      return { status: 200, data: { tasks, templates, dateString, dayOfWeek } };
+    } catch (err) {
+      console.error('❌ Ошибка при получении задач на сегодня:', err);
+      return { status: 500, data: { error: err.message } };
     }
   }
 }

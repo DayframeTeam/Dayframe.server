@@ -134,6 +134,10 @@ function updateTaskById(id, task) {
   );
 }
 
+function getTasksForToday(user_id, task_date) {
+  return db.query('SELECT * FROM tasks WHERE user_id = ? AND task_date = ? OR task_date IS NULL', [user_id, task_date]);
+}
+
 module.exports = {
   getAllTasksByUser,
   getTaskById,
@@ -142,4 +146,5 @@ module.exports = {
   setTaskStatus,
   setTaskDate,
   updateTaskById,
+  getTasksForToday,
 };

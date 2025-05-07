@@ -112,6 +112,27 @@ function updateTemplateTaskActive(id, is_active) {
   ]);
 }
 
+function getTemplatesForDay(user_id, dayOfWeek) {
+  // 1) Собираем JSON-массив [dow], например "[3]"
+  const repeat_rule = JSON.stringify([dayOfWeek]);
+
+  // 2) Выбираем только is_active = 1 и repeat_rule = "daily" ИЛИ JSON-массив содержит dow
+  const sql = `
+    SELECT *
+    FROM template_tasks
+    WHERE user_id   = ?
+      AND is_active = 1
+      AND (
+        -- либо это ежедневный шаблон
+        JSON_UNQUOTE(repeat_rule) = 'daily'
+        -- либо массив repeat_rule содержит нужный день недели
+        OR JSON_CONTAINS(repeat_rule, ?)
+      )
+  `;
+
+  return db.query(sql, [user_id, repeat_rule]);
+}
+
 module.exports = {
   getTemplateTaskById,
   getAllTemplateTasksByUser,
@@ -119,4 +140,5 @@ module.exports = {
   deleteTemplateTaskById,
   updateTemplateTaskById,
   updateTemplateTaskActive,
+  getTemplatesForDay,
 };
