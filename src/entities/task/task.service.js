@@ -1,7 +1,7 @@
 const taskModel = require('./models/task.model');
 const subtaskModel = require('./models/subtask.model');
 const userService = require('../user/user.service');
-const { utcToZonedTime, format } = require('date-fns-tz');
+const { getDateStringInTZ } = require('../../utils/date');
 const templateModel = require('../template.task/models/template.task.model');
 
 /**
@@ -230,7 +230,7 @@ class TaskService {
         // задача не выполненна, снимаем опыт
         fullTask.exp > 0 &&
           (await userService.updateUserExp(userId, -fullTask.exp));
-          fullTask.subtasks &&
+        fullTask.subtasks &&
           (await subtaskModel.updateSubtasksStatusByParentTaskId(
             fullTask.id,
             is_done,
@@ -368,20 +368,17 @@ class TaskService {
    */
   async getTasksForToday(userId, timeZone = 'UTC') {
     try {
-      // 1) конвертируем сейчас в локальный момент пользователя
-      const now = new Date();
-      const localDate = utcToZonedTime(now, timeZone);
+      const dateString = getDateStringInTZ(timeZone);
+      const [tasks] = await taskModel.getTasksForToday(userId, dateString);
 
-      // 2) получаем строку для обычных задач
-      const dateString = format(localDate, 'yyyy.MM.dd', { timeZone });
-      const tasks = await taskModel.getTasksForToday(userId, dateString);
-
-      // 3) считаем dayOfWeek: JS: 0=ВС,1=ПН…6=СБ → 1=ПН…7=ВС
-      const jsDay = localDate.getDay();
+      // день недели тоже вычисляем по локальному времени
+      const local = new Date(new Date().toLocaleString('en-US', { timeZone }));
+      const jsDay = local.getDay();
       const dayOfWeek = jsDay === 0 ? 7 : jsDay;
-
-      // 4) забираем шаблоны, у которых repeat_rule=daily ИЛИ массив содержит этот день
-      const templates = await templateModel.getTemplatesForDay(userId, dayOfWeek);
+      const [templates] = await templateModel.getTemplatesForDay(
+        userId,
+        dayOfWeek,
+      );
 
       return { status: 200, data: { tasks, templates, dateString, dayOfWeek } };
     } catch (err) {
