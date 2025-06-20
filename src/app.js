@@ -8,10 +8,16 @@ const app = express();
 // Middleware setup
 app.use(
   cors({
-    origin: '*',
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'https://www.dayframe.ru',
+      'https://dayframe.ru',
+    ],
     methods: 'GET,POST,PATCH,DELETE',
-    allowedHeaders: '*',
-  }),
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    credentials: true,
+  })
 );
 app.use(express.json());
 
@@ -58,9 +64,7 @@ async function ensureDatabaseConnection(attempts = 5, delay = 5000) {
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
-  console.error(
-    '❌ Не удалось подключиться к базе данных после нескольких попыток.',
-  );
+  console.error('❌ Не удалось подключиться к базе данных после нескольких попыток.');
   return false;
 }
 

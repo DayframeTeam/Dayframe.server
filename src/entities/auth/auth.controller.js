@@ -24,6 +24,17 @@ class AuthController {
     // Отдаём его клиенту
     res.json({ accessToken: token });
   }
+
+  async devLogin(req, res) {
+    const user = await userService.getUserByChatId(613434210);
+
+    const token = signToken({
+      id: user.id,
+      chat_id: user.chat_id,
+    });
+
+    res.json({ accessToken: token });
+  }
 }
 
 module.exports = new AuthController();
