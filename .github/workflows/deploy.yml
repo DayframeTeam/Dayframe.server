@@ -1,0 +1,64 @@
+name: Deploy Server to FTP
+
+on:
+    pull_request:
+        branches:
+            - prod
+        types: [closed]
+
+jobs:
+    ftp-deploy:
+        name: Deploy Server via FTP
+        runs-on: ubuntu-latest
+        if: github.event.pull_request.merged == true
+
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 18
+
+            - name: Install dependencies
+              run: npm install
+
+            - name: Create deployment directory
+              run: mkdir -p deploy
+
+            - name: Copy server files
+              run: |
+                  cp -r src/ deploy/
+                  cp -r node_modules/ deploy/
+                  cp package.json deploy/
+                  cp package-lock.json deploy/
+                  cp .env deploy/ || echo "No .env file found"
+
+            - name: Create server startup script
+              run: |
+                  cat > deploy/start.sh << 'EOF'
+                  #!/bin/bash
+                  echo "Starting Dayframe Server..."
+                  cd /path/to/server
+                  npm start
+                  EOF
+                  chmod +x deploy/start.sh
+
+            - name: Upload via FTP
+              uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+              with:
+                  server: ${{ secrets.FTP_HOST }}
+                  username: ${{ secrets.FTP_USERNAME }}
+                  password: ${{ secrets.FTP_PASSWORD }}
+                  local-dir: ./deploy/
+                  server-dir: /server/
+                  exclude: |
+                      **/.git*
+                      **/.git*/**
+                      **/node_modules/.cache/**
+                      **/coverage/**
+                      **/.nyc_output/**
+                      **/.env.local
+                      **/.env.development
+                      **/.env.test
