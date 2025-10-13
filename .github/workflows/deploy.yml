@@ -14,36 +14,15 @@ jobs:
 
         steps:
             - name: Checkout repo
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
 
             - name: Setup Node.js
-              uses: actions/setup-node@v3
+              uses: actions/setup-node@v4
               with:
                   node-version: 18
 
             - name: Install dependencies
               run: npm install
-
-            - name: Create deployment directory
-              run: mkdir -p deploy
-
-            - name: Copy server files
-              run: |
-                  cp -r src/ deploy/
-                  cp -r node_modules/ deploy/
-                  cp package.json deploy/
-                  cp package-lock.json deploy/
-                  cp .env deploy/ || echo "No .env file found"
-
-            - name: Create server startup script
-              run: |
-                  cat > deploy/start.sh << 'EOF'
-                  #!/bin/bash
-                  echo "Starting Dayframe Server..."
-                  cd /path/to/server
-                  npm start
-                  EOF
-                  chmod +x deploy/start.sh
 
             - name: Upload via FTP
               uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -51,14 +30,9 @@ jobs:
                   server: ${{ secrets.FTP_HOST }}
                   username: ${{ secrets.FTP_USERNAME }}
                   password: ${{ secrets.FTP_PASSWORD }}
-                  local-dir: ./deploy/
-                  server-dir: /server/
+                  local-dir: ./
                   exclude: |
                       **/.git*
                       **/.git*/**
-                      **/node_modules/.cache/**
-                      **/coverage/**
-                      **/.nyc_output/**
-                      **/.env.local
-                      **/.env.development
-                      **/.env.test
+                      **/node_modules/**
+                      **/.github/**
