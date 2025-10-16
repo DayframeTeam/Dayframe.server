@@ -369,7 +369,7 @@ class TaskService {
   async getTasksForToday(userId, timeZone = 'Europe/Moscow') {
     try {
       const dateString = getDateStringInTZ(timeZone);
-      const [tasks] = await taskModel.getTasksForToday(userId, dateString);
+      const [tasks] = await taskModel.getTasksForDate(userId, dateString);
 
       // день недели тоже вычисляем по локальному времени
       const local = new Date(new Date().toLocaleString('en-US', { timeZone }));
