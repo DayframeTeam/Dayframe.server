@@ -67,7 +67,7 @@ function addTask(task) {
       special_id,
       is_done,
       task_date,
-    ],
+    ]
   );
 }
 
@@ -98,16 +98,7 @@ function setTaskDate(task_date, id) {
  * @param {Object} task - Task object with updated fields
  */
 function updateTaskById(id, task) {
-  const {
-    title,
-    description,
-    category,
-    priority,
-    start_time,
-    end_time,
-    task_date,
-    is_done,
-  } = task;
+  const { title, description, category, priority, start_time, end_time, task_date, is_done } = task;
 
   return db.query(
     `UPDATE tasks SET
@@ -120,22 +111,34 @@ function updateTaskById(id, task) {
       task_date = ?,
       is_done = ?
      WHERE id = ?`,
-    [
-      title,
-      description,
-      category,
-      priority,
-      start_time,
-      end_time,
-      task_date,
-      is_done,
-      id,
-    ],
+    [title, description, category, priority, start_time, end_time, task_date, is_done, id]
   );
 }
 
-function getTasksForToday(user_id, task_date) {
-  return db.query('SELECT * FROM tasks WHERE user_id = ? AND task_date = ? OR task_date IS NULL', [user_id, task_date]);
+function getTasksForDate(user_id, task_date) {
+  return db.query('SELECT * FROM tasks WHERE user_id = ? AND task_date = ? OR task_date IS NULL', [
+    user_id,
+    task_date,
+  ]);
+}
+
+/**
+ * Get tasks for a specific date period
+ * @param {number} user_id - User ID
+ * @param {string} startDate - Start date in YYYY-MM-DD format
+ * @param {string} endDate - End date in YYYY-MM-DD format
+ */
+function getTasksForPeriod(user_id, startDate, endDate) {
+  return db
+    .query(
+      'SELECT * FROM tasks WHERE user_id = ? AND (task_date BETWEEN ? AND ? OR task_date IS NULL)',
+      [user_id, startDate, endDate]
+    )
+    .then(([tasks]) => [tasks])
+    .catch((error) => {
+      console.error('Ошибка при получении задач за период:', error);
+      throw error;
+    });
 }
 
 module.exports = {
@@ -146,5 +149,6 @@ module.exports = {
   setTaskStatus,
   setTaskDate,
   updateTaskById,
-  getTasksForToday,
+  getTasksForDate,
+  getTasksForPeriod,
 };

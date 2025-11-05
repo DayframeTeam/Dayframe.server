@@ -23,8 +23,7 @@ class TaskController {
    */
   createTask(req, res) {
     const userId = Number(req.user.id);
-    if (!userId)
-      return res.status(400).json({ error: 'Не передан user-id в заголовке' });
+    if (!userId) return res.status(400).json({ error: 'Не передан user-id в заголовке' });
 
     taskService.createTask(userId, req.body).then((result) => {
       res.status(result.status).json(result.data);
@@ -81,23 +80,37 @@ class TaskController {
 
     // Check input data
     if (typeof is_done !== 'boolean') {
-      return res
-        .status(400)
-        .json({ error: 'Поле is_done должно быть boolean (true/false)' });
+      return res.status(400).json({ error: 'Поле is_done должно быть boolean (true/false)' });
     }
 
     try {
       // Update subtask status
-      const subtaskResult = await taskService.updateSubtaskStatus(
-        subtaskId,
-        is_done,
-        userId,
-      );
+      const subtaskResult = await taskService.updateSubtaskStatus(subtaskId, is_done, userId);
       res.status(subtaskResult.status).json(subtaskResult.data);
     } catch (err) {
       console.error('❌ Ошибка при обновлении подзадачи:', err);
       res.status(500).json({ error: 'Ошибка при обновлении подзадачи' });
     }
+  }
+
+  /**
+   * Get tasks for a specific date period
+   */
+  getTasksForPeriod(req, res) {
+    const userId = Number(req.user.id);
+    const { startDate, endDate } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'Не передан user-id в заголовке' });
+    }
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Не переданы параметры startDate и endDate' });
+    }
+
+    taskService.getTasksForPeriod(userId, startDate, endDate).then((result) => {
+      res.status(result.status).json(result.data);
+    });
   }
 }
 
