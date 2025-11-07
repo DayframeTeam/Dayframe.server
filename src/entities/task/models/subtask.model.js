@@ -5,20 +5,22 @@ function getSubtasksAllByUserId(user_id) {
   return db.query(query, [user_id]);
 }
 
+function getAllSubtasksByUserId(user_id) {
+  return db
+    .query('SELECT * FROM subtasks WHERE user_id = ?', [user_id])
+    .then(([subtasks]) => [subtasks])
+    .catch((error) => {
+      console.error('Ошибка при получении подзадач:', error);
+      throw error;
+    });
+}
+
 function getAllSubtasksByParentTaskId(parent_task_id) {
-  return db.query('SELECT * FROM subtasks WHERE parent_task_id = ?', [
-    parent_task_id,
-  ]);
+  return db.query('SELECT * FROM subtasks WHERE parent_task_id = ?', [parent_task_id]);
 }
 
 function addSubtask(user_id, subtask) {
-  const {
-    parent_task_id,
-    title,
-    is_done = false,
-    position = 0,
-    special_id,
-  } = subtask;
+  const { parent_task_id, title, is_done = false, position = 0, special_id } = subtask;
 
   if (!special_id) {
     throw new Error('special_id is required for subtasks');
@@ -28,14 +30,7 @@ function addSubtask(user_id, subtask) {
       INSERT INTO subtasks (parent_task_id, title, is_done, position, special_id, user_id, created_at)
       VALUES (?, ?, ?, ?, ?, ?, NOW())
     `;
-  return db.query(query, [
-    parent_task_id,
-    title,
-    is_done,
-    position,
-    special_id,
-    user_id,
-  ]);
+  return db.query(query, [parent_task_id, title, is_done, position, special_id, user_id]);
 }
 
 function getSubtaskById(id) {
@@ -47,10 +42,7 @@ function deleteSubtaskById(id) {
 }
 
 function updateSubtaskStatus(id, is_done) {
-  return db.query('UPDATE subtasks SET is_done = ? WHERE id = ?', [
-    is_done,
-    id,
-  ]);
+  return db.query('UPDATE subtasks SET is_done = ? WHERE id = ?', [is_done, id]);
 }
 
 function updateSubtasksStatusByParentTaskId(parent_task_id, is_done) {
@@ -88,6 +80,7 @@ function countCompletedSubtaskByParentTaskId(parent_task_id) {
 
 module.exports = {
   getSubtasksAllByUserId,
+  getAllSubtasksByUserId,
   getAllSubtasksByParentTaskId,
   addSubtask,
   getSubtaskById,

@@ -6,6 +6,7 @@ const taskService = require('./task.service');
 class TaskController {
   /**
    * Get all tasks with their subtasks for a user
+   * @deprecated Use getAllTasksOptimized instead. This method uses inefficient N+1 queries.
    */
   getTasksWithSubTasks(req, res) {
     const userId = Number(req.user.id);
@@ -16,6 +17,38 @@ class TaskController {
     taskService.getTasksWithSubTasks(userId).then((result) => {
       res.status(result.status).json(result.data);
     });
+  }
+
+  /**
+   * Optimized version: Get all tasks with subtasks using optimized query
+   * Includes timeout handling to prevent 502 errors
+   */
+  getAllTasksOptimized(req, res) {
+    const userId = Number(req.user.id);
+    if (!userId) {
+      return res.status(400).json({ error: 'Не передан user-id в заголовке' });
+    }
+
+    // Add timeout of 25 seconds (less than 30 seconds at Express level)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout')), 25000)
+    );
+
+    Promise.race([taskService.getAllTasksWithSubTasksOptimized(userId), timeoutPromise])
+      .then((result) => {
+        if (res.headersSent) return; // Check if response already sent
+        res.status(result.status).json(result.data);
+      })
+      .catch((err) => {
+        if (res.headersSent) return; // Check if response already sent
+        console.error('❌ Ошибка при получении задач:', err);
+        res.status(500).json({
+          error:
+            err.message === 'Request timeout'
+              ? 'Превышено время ожидания ответа от сервера'
+              : 'Ошибка при получении задач',
+        });
+      });
   }
 
   /**
