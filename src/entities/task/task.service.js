@@ -422,6 +422,53 @@ class TaskService {
       return { status: 500, data: { error: err.message } };
     }
   }
+
+  /**
+   * Optimized version: Get tasks for a specific date with subtasks using only 2 SQL queries
+   * @param {number} userId - User ID
+   * @param {string} taskDate - Date in YYYY-MM-DD format
+   * @returns {Promise<{status: number, data: any}>}
+   */
+  async getTasksForDateWithSubTasks(userId, taskDate) {
+    try {
+      // Get all tasks for the date and all subtasks for the user in parallel (2 queries total)
+      const [[tasks], [subtasks]] = await Promise.all([
+        taskModel.getTasksForDate(userId, taskDate),
+        subtaskModel.getAllSubtasksByUserId(userId),
+      ]);
+
+      if (!tasks.length) {
+        return { status: 404, data: { error: 'Задачи не найдены' } };
+      }
+
+      // Filter subtasks to only include those for tasks on this date
+      const taskIds = new Set(tasks.map((task) => task.id));
+      const relevantSubtasks = (subtasks || []).filter((subtask) =>
+        taskIds.has(subtask.parent_task_id)
+      );
+
+      // Group subtasks by parent_task_id for O(1) lookup
+      const subtasksByTaskId = new Map();
+      for (const subtask of relevantSubtasks) {
+        const taskId = subtask.parent_task_id;
+        if (!subtasksByTaskId.has(taskId)) {
+          subtasksByTaskId.set(taskId, []);
+        }
+        subtasksByTaskId.get(taskId).push(subtask);
+      }
+
+      // Combine tasks with their subtasks
+      const fullTasks = tasks.map((task) => ({
+        ...task,
+        subtasks: subtasksByTaskId.get(task.id) || [],
+      }));
+
+      return { status: 200, data: fullTasks };
+    } catch (err) {
+      console.error('❌ Ошибка при получении задач на дату с подзадачами:', err);
+      return { status: 500, data: { error: err.message } };
+    }
+  }
 }
 
 // Create a singleton instance
