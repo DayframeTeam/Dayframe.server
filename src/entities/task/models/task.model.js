@@ -2,6 +2,7 @@ const db = require('../../../config/db');
 
 /**
  * Get all tasks for a specific user
+ * @deprecated Use getAllTasksWithSubtasksByUser for better performance when subtasks are needed
  * @param {number} user_id - User ID
  */
 function getAllTasksByUser(user_id) {
@@ -67,7 +68,7 @@ function addTask(task) {
       special_id,
       is_done,
       task_date,
-    ]
+    ],
   );
 }
 
@@ -98,7 +99,16 @@ function setTaskDate(task_date, id) {
  * @param {Object} task - Task object with updated fields
  */
 function updateTaskById(id, task) {
-  const { title, description, category, priority, start_time, end_time, task_date, is_done } = task;
+  const {
+    title,
+    description,
+    category,
+    priority,
+    start_time,
+    end_time,
+    task_date,
+    is_done,
+  } = task;
 
   return db.query(
     `UPDATE tasks SET
@@ -111,7 +121,17 @@ function updateTaskById(id, task) {
       task_date = ?,
       is_done = ?
      WHERE id = ?`,
-    [title, description, category, priority, start_time, end_time, task_date, is_done, id]
+    [
+      title,
+      description,
+      category,
+      priority,
+      start_time,
+      end_time,
+      task_date,
+      is_done,
+      id,
+    ],
   );
 }
 
@@ -123,20 +143,42 @@ function getTasksForDate(user_id, task_date) {
 }
 
 /**
- * Get tasks for a specific date period
+ * Get all tasks with their subtasks for a user using SQL JOIN (optimized)
  * @param {number} user_id - User ID
- * @param {string} startDate - Start date in YYYY-MM-DD format
- * @param {string} endDate - End date in YYYY-MM-DD format
+ * @returns {Promise} Promise resolving to tasks with subtasks in a flat structure
  */
-function getTasksForPeriod(user_id, startDate, endDate) {
+function getAllTasksWithSubtasksByUser(user_id) {
   return db
     .query(
-      'SELECT * FROM tasks WHERE user_id = ? AND (task_date BETWEEN ? AND ? OR task_date IS NULL)',
-      [user_id, startDate, endDate]
+      `SELECT 
+        t.id,
+        t.title,
+        t.description,
+        t.category,
+        t.priority,
+        t.exp,
+        t.start_time,
+        t.end_time,
+        t.task_date,
+        t.user_id,
+        t.special_id,
+        t.is_done,
+        t.created_at,
+        s.id as subtask_id,
+        s.title as subtask_title,
+        s.is_done as subtask_is_done,
+        s.position as subtask_position,
+        s.special_id as subtask_special_id,
+        s.created_at as subtask_created_at
+      FROM tasks t
+      LEFT JOIN subtasks s ON t.id = s.parent_task_id
+      WHERE t.user_id = ?
+      ORDER BY t.id, s.position`,
+      [user_id]
     )
-    .then(([tasks]) => [tasks])
+    .then(([rows]) => [rows])
     .catch((error) => {
-      console.error('Ошибка при получении задач за период:', error);
+      console.error('Ошибка при получении задач с подзадачами:', error);
       throw error;
     });
 }
@@ -150,5 +192,5 @@ module.exports = {
   setTaskDate,
   updateTaskById,
   getTasksForDate,
-  getTasksForPeriod,
+  getAllTasksWithSubtasksByUser,
 };

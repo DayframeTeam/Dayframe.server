@@ -13,7 +13,6 @@ app.use(
       'http://localhost:4173',
       'https://www.dayframe.ru',
       'https://dayframe.ru',
-      'https://dayframe.na4u.ru',
     ],
     methods: 'GET,POST,PATCH,DELETE',
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
