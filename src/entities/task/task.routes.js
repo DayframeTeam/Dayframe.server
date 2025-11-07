@@ -5,8 +5,8 @@ const authorizeTask = require('../../middleware/authorizeTask');
 const authorizeSubTask = require('../../middleware/authorizeSubTask');
 const authenticate = require('../../middleware/authenticate');
 
-// Получить все задачи по id пользователя
-router.get('/', authenticate, (req, res) => taskController.getTasksWithSubTasks(req, res));
+// Получить все задачи по id пользователя (оптимизированная версия)
+router.get('/', authenticate, (req, res) => taskController.getAllTasksOptimized(req, res));
 
 // Получить задачи за период
 router.get('/period', authenticate, (req, res) => taskController.getTasksForPeriod(req, res));

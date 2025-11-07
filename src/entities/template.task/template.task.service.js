@@ -12,10 +12,9 @@ class TemplateTaskService {
           data: { error: 'Не удалось получить шаблон задачи' },
         };
 
-      const [subtasks] =
-        await templateSubtaskModel.getAllTemplateSubtasksByParentTemplateTaskId(
-          taskId,
-        );
+      const [subtasks] = await templateSubtaskModel.getAllTemplateSubtasksByParentTemplateTaskId(
+        taskId
+      );
       return {
         ...task,
         subtasks: subtasks || [],
@@ -33,24 +32,32 @@ class TemplateTaskService {
         return { status: 404, data: { error: 'Шаблоны задач не найдены' } };
       }
 
-      const fullTasks = [];
-      for (const task of rows) {
+      // Используем Promise.allSettled для параллельной обработки с таймаутом
+      const taskPromises = rows.map(async (task) => {
         try {
-          const fullTask = await this.getFullTemplateTaskById(task.id);
-          if (fullTask) {
-            fullTasks.push(fullTask);
-          }
+          // Добавляем таймаут 5 секунд на каждый запрос
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), 5000)
+          );
+
+          const fullTaskPromise = this.getFullTemplateTaskById(task.id);
+          const fullTask = await Promise.race([fullTaskPromise, timeoutPromise]);
+
+          return fullTask;
         } catch (err) {
-          console.error(`Ошибка при получении шаблона задачи ${task.id}:`, err);
+          console.error(`Ошибка при получении шаблона задачи ${task.id}:`, err.message || err);
+          return null;
         }
-      }
+      });
+
+      const results = await Promise.allSettled(taskPromises);
+      const fullTasks = results
+        .map((result) => (result.status === 'fulfilled' ? result.value : null))
+        .filter((task) => task !== null);
 
       return { status: 200, data: fullTasks };
     } catch (err) {
-      console.error(
-        '❌ Ошибка при получении шаблонов задач с подзадачами:',
-        err,
-      );
+      console.error('❌ Ошибка при получении шаблонов задач с подзадачами:', err);
       return { status: 500, data: { error: err.message } };
     }
   }
@@ -72,7 +79,7 @@ class TemplateTaskService {
             templateSubtaskModel.addTemplateSubtask(userId, {
               ...sub,
               template_task_id: taskId,
-            }),
+            })
           );
         }
       }
@@ -138,7 +145,7 @@ class TemplateTaskService {
             templateSubtaskModel.addTemplateSubtask(updatedTask.user_id, {
               ...sub,
               template_task_id: taskId,
-            }),
+            })
           );
 
           // удаление подзадачи
@@ -148,11 +155,7 @@ class TemplateTaskService {
           // обновление существующей подзадачи
         } else if (sub.id) {
           promises.push(
-            templateSubtaskModel.updateTemplateSubtask(
-              sub.id,
-              sub.title,
-              sub.position,
-            ),
+            templateSubtaskModel.updateTemplateSubtask(sub.id, sub.title, sub.position)
           );
         }
       }
