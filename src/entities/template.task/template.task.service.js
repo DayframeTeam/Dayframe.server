@@ -26,6 +26,10 @@ class TemplateTaskService {
     }
   }
 
+  /**
+   * Get all template tasks with subtasks for a user (deprecated - uses N+1 queries)
+   * @deprecated Use getTemplateTasksWithSubTasksOptimized instead - it uses optimized SQL JOIN
+   */
   async getTemplateTasksWithSubTasks(userId) {
     try {
       const [rows] = await templateTaskModel.getAllTemplateTasksByUser(userId);
@@ -47,10 +51,78 @@ class TemplateTaskService {
 
       return { status: 200, data: fullTasks };
     } catch (err) {
-      console.error(
-        '❌ Ошибка при получении шаблонов задач с подзадачами:',
-        err,
-      );
+      console.error('❌ Ошибка при получении шаблонов задач с подзадачами:', err);
+      return { status: 500, data: { error: err.message } };
+    }
+  }
+
+  /**
+   * Get all template tasks with subtasks for a user (optimized with SQL JOIN)
+   */
+  async getTemplateTasksWithSubTasksOptimized(userId) {
+    try {
+      const [rows] = await templateTaskModel.getAllTemplateTasksWithSubtasksByUser(userId);
+
+      if (!rows.length) {
+        return { status: 404, data: { error: 'Шаблоны задач не найдены' } };
+      }
+
+      // Группируем результаты по задачам
+      const tasksMap = new Map();
+
+      for (const row of rows) {
+        const taskId = row.id;
+
+        // Создаем задачу, если её еще нет
+        if (!tasksMap.has(taskId)) {
+          tasksMap.set(taskId, {
+            id: row.id,
+            title: row.title,
+            description: row.description,
+            category: row.category,
+            priority: row.priority,
+            exp: row.exp,
+            start_time: row.start_time,
+            end_time: row.end_time,
+            user_id: row.user_id,
+            created_at: row.created_at,
+            special_id: row.special_id,
+            is_active: row.is_active,
+            repeat_rule: (() => {
+              if (typeof row.repeat_rule !== 'string') {
+                return row.repeat_rule;
+              }
+              // Пытаемся распарсить JSON, если не получается - оставляем строку как есть
+              try {
+                return JSON.parse(row.repeat_rule);
+              } catch {
+                // Если это не JSON (например, "weekly" или "quests"), возвращаем как есть
+                return row.repeat_rule;
+              }
+            })(),
+            start_active_date: row.start_active_date,
+            end_active_date: row.end_active_date,
+            subtasks: [],
+          });
+        }
+
+        // Добавляем подзадачу, если она есть
+        if (row.subtask_id) {
+          tasksMap.get(taskId).subtasks.push({
+            id: row.subtask_id,
+            title: row.subtask_title,
+            position: row.subtask_position,
+            special_id: row.subtask_special_id,
+            created_at: row.subtask_created_at,
+            template_task_id: taskId,
+          });
+        }
+      }
+
+      const fullTasks = Array.from(tasksMap.values());
+      return { status: 200, data: fullTasks };
+    } catch (err) {
+      console.error('❌ Ошибка при получении шаблонов задач с подзадачами:', err);
       return { status: 500, data: { error: err.message } };
     }
   }

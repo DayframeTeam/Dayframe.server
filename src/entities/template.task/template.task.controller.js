@@ -7,7 +7,7 @@ class TemplateTaskController {
       return res.status(400).json({ error: 'Не передан user-id в заголовке' });
     }
 
-    templateTaskService.getTemplateTasksWithSubTasks(userId).then((result) => {
+    templateTaskService.getTemplateTasksWithSubTasksOptimized(userId).then((result) => {
       res.status(result.status).json(result.data);
     });
   }
