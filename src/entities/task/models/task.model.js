@@ -2,6 +2,7 @@ const db = require('../../../config/db');
 
 /**
  * Get all tasks for a specific user
+ * @deprecated Use getAllTasksWithSubtasksByUser for better performance when subtasks are needed
  * @param {number} user_id - User ID
  */
 function getAllTasksByUser(user_id) {
@@ -135,7 +136,51 @@ function updateTaskById(id, task) {
 }
 
 function getTasksForDate(user_id, task_date) {
-  return db.query('SELECT * FROM tasks WHERE user_id = ? AND task_date = ? OR task_date IS NULL', [user_id, task_date]);
+  return db.query('SELECT * FROM tasks WHERE user_id = ? AND task_date = ? OR task_date IS NULL', [
+    user_id,
+    task_date,
+  ]);
+}
+
+/**
+ * Get all tasks with their subtasks for a user using SQL JOIN (optimized)
+ * @param {number} user_id - User ID
+ * @returns {Promise} Promise resolving to tasks with subtasks in a flat structure
+ */
+function getAllTasksWithSubtasksByUser(user_id) {
+  return db
+    .query(
+      `SELECT 
+        t.id,
+        t.title,
+        t.description,
+        t.category,
+        t.priority,
+        t.exp,
+        t.start_time,
+        t.end_time,
+        t.task_date,
+        t.user_id,
+        t.special_id,
+        t.is_done,
+        t.created_at,
+        s.id as subtask_id,
+        s.title as subtask_title,
+        s.is_done as subtask_is_done,
+        s.position as subtask_position,
+        s.special_id as subtask_special_id,
+        s.created_at as subtask_created_at
+      FROM tasks t
+      LEFT JOIN subtasks s ON t.id = s.parent_task_id
+      WHERE t.user_id = ?
+      ORDER BY t.id, s.position`,
+      [user_id]
+    )
+    .then(([rows]) => [rows])
+    .catch((error) => {
+      console.error('Ошибка при получении задач с подзадачами:', error);
+      throw error;
+    });
 }
 
 module.exports = {
@@ -147,4 +192,5 @@ module.exports = {
   setTaskDate,
   updateTaskById,
   getTasksForDate,
+  getAllTasksWithSubtasksByUser,
 };

@@ -10,6 +10,7 @@ const templateModel = require('../template.task/models/template.task.model');
 class TaskService {
   /**
    * Get full task with all subtasks
+   * @deprecated For batch operations, use optimized methods. This method is still used for single task operations.
    */
   async getFullTaskById(taskId) {
     try {
@@ -21,9 +22,7 @@ class TaskService {
           data: { error: 'Не удалось получить задачу' },
         };
 
-      const [subtasks] = await subtaskModel.getAllSubtasksByParentTaskId(
-        taskId,
-      );
+      const [subtasks] = await subtaskModel.getAllSubtasksByParentTaskId(taskId);
       return {
         ...task,
         subtasks: subtasks || [],
@@ -37,9 +36,69 @@ class TaskService {
   }
 
   /**
-   * Get all tasks with subtasks for a user
+   * Get all tasks with subtasks for a user (optimized with SQL JOIN)
    */
   async getTasksWithSubTasks(userId) {
+    try {
+      const [rows] = await taskModel.getAllTasksWithSubtasksByUser(userId);
+
+      if (!rows.length) {
+        return { status: 404, data: { error: 'Задачи не найдены' } };
+      }
+
+      // Группируем результаты по задачам
+      const tasksMap = new Map();
+
+      for (const row of rows) {
+        const taskId = row.id;
+
+        // Создаем задачу, если её еще нет
+        if (!tasksMap.has(taskId)) {
+          tasksMap.set(taskId, {
+            id: row.id,
+            title: row.title,
+            description: row.description,
+            category: row.category,
+            priority: row.priority,
+            exp: row.exp,
+            start_time: row.start_time,
+            end_time: row.end_time,
+            task_date: row.task_date,
+            user_id: row.user_id,
+            special_id: row.special_id,
+            is_done: row.is_done,
+            created_at: row.created_at,
+            subtasks: [],
+          });
+        }
+
+        // Добавляем подзадачу, если она есть
+        if (row.subtask_id) {
+          tasksMap.get(taskId).subtasks.push({
+            id: row.subtask_id,
+            title: row.subtask_title,
+            is_done: row.subtask_is_done,
+            position: row.subtask_position,
+            special_id: row.subtask_special_id,
+            created_at: row.subtask_created_at,
+            parent_task_id: taskId,
+          });
+        }
+      }
+
+      const fullTasks = Array.from(tasksMap.values());
+      return { status: 200, data: fullTasks };
+    } catch (err) {
+      console.error('❌ Ошибка при получении задач с подзадачами:', err);
+      return { status: 500, data: { error: err.message } };
+    }
+  }
+
+  /**
+   * Get all tasks with subtasks for a user (deprecated - uses N+1 queries)
+   * @deprecated Use getTasksWithSubTasks instead - it uses optimized SQL JOIN
+   */
+  async getTasksWithSubTasksDeprecated(userId) {
     try {
       const [rows] = await taskModel.getAllTasksByUser(userId);
       if (!rows.length) {
