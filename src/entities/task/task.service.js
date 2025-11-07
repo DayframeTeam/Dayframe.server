@@ -21,7 +21,9 @@ class TaskService {
           data: { error: 'Не удалось получить задачу' },
         };
 
-      const [subtasks] = await subtaskModel.getAllSubtasksByParentTaskId(taskId);
+      const [subtasks] = await subtaskModel.getAllSubtasksByParentTaskId(
+        taskId,
+      );
       return {
         ...task,
         subtasks: subtasks || [],
@@ -36,7 +38,6 @@ class TaskService {
 
   /**
    * Get all tasks with subtasks for a user
-   * @deprecated Use getAllTasksWithSubTasksOptimized instead. This method uses inefficient N+1 queries (1 + 2N queries).
    */
   async getTasksWithSubTasks(userId) {
     try {
@@ -67,47 +68,6 @@ class TaskService {
   }
 
   /**
-   * Optimized version: Get all tasks with subtasks using only 2 SQL queries
-   * Instead of 1 + 2N queries (where N is number of tasks)
-   */
-  async getAllTasksWithSubTasksOptimized(userId) {
-    try {
-      // Get all tasks and all subtasks in parallel (2 queries total)
-      const [[tasks], [subtasks]] = await Promise.all([
-        taskModel.getAllTasksByUser(userId),
-        subtaskModel.getAllSubtasksByUserId(userId),
-      ]);
-
-      if (!tasks.length) {
-        return { status: 404, data: { error: 'Задачи не найдены' } };
-      }
-
-      // Group subtasks by parent_task_id for O(1) lookup
-      const subtasksByTaskId = new Map();
-      if (subtasks && subtasks.length > 0) {
-        for (const subtask of subtasks) {
-          const taskId = subtask.parent_task_id;
-          if (!subtasksByTaskId.has(taskId)) {
-            subtasksByTaskId.set(taskId, []);
-          }
-          subtasksByTaskId.get(taskId).push(subtask);
-        }
-      }
-
-      // Combine tasks with their subtasks
-      const fullTasks = tasks.map((task) => ({
-        ...task,
-        subtasks: subtasksByTaskId.get(task.id) || [],
-      }));
-
-      return { status: 200, data: fullTasks };
-    } catch (err) {
-      console.error('❌ Ошибка при получении задач с подзадачами (оптимизированная версия):', err);
-      return { status: 500, data: { error: err.message } };
-    }
-  }
-
-  /**
    * Create a new task
    */
   async createTask(userId, taskData) {
@@ -127,7 +87,7 @@ class TaskService {
             subtaskModel.addSubtask(userId, {
               ...sub,
               parent_task_id: taskId,
-            })
+            }),
           );
         }
       }
@@ -191,7 +151,7 @@ class TaskService {
             subtaskModel.addSubtask(updatedTask.user_id, {
               ...sub,
               parent_task_id: taskId,
-            })
+            }),
           );
 
           // удаление подзадачи
@@ -200,7 +160,9 @@ class TaskService {
 
           // обновление существующей подзадачи
         } else if (sub.id) {
-          promises.push(subtaskModel.updateSubtask(sub.id, sub.title, sub.position));
+          promises.push(
+            subtaskModel.updateSubtask(sub.id, sub.title, sub.position),
+          );
         }
       }
 
@@ -209,7 +171,11 @@ class TaskService {
 
       // 4) Если добавили хоть одну новую — переоткрываем задачу
       if (needReopen) {
-        const result = await this.updateTaskStatus(taskId, false, updatedTask.user_id);
+        const result = await this.updateTaskStatus(
+          taskId,
+          false,
+          updatedTask.user_id,
+        );
 
         return {
           status: 200,
@@ -252,15 +218,23 @@ class TaskService {
 
       if (is_done) {
         // задача выполненна, начисляем опыт
-        fullTask.exp > 0 && (await userService.updateUserExp(userId, fullTask.exp));
+        fullTask.exp > 0 &&
+          (await userService.updateUserExp(userId, fullTask.exp));
         // выполняем все подзадачи
         fullTask.subtasks &&
-          (await subtaskModel.updateSubtasksStatusByParentTaskId(fullTask.id, is_done));
+          (await subtaskModel.updateSubtasksStatusByParentTaskId(
+            fullTask.id,
+            is_done,
+          ));
       } else {
         // задача не выполненна, снимаем опыт
-        fullTask.exp > 0 && (await userService.updateUserExp(userId, -fullTask.exp));
+        fullTask.exp > 0 &&
+          (await userService.updateUserExp(userId, -fullTask.exp));
         fullTask.subtasks &&
-          (await subtaskModel.updateSubtasksStatusByParentTaskId(fullTask.id, is_done));
+          (await subtaskModel.updateSubtasksStatusByParentTaskId(
+            fullTask.id,
+            is_done,
+          ));
       }
       //   if (fullTask.exp !== 0) {
       //     // Calculate XP delta based on updated status
@@ -361,7 +335,11 @@ class TaskService {
    */
   async updateSubtask(subtaskId, title, position, parent_task_id) {
     try {
-      const [result] = await subtaskModel.updateSubtask(subtaskId, title, position);
+      const [result] = await subtaskModel.updateSubtask(
+        subtaskId,
+        title,
+        position,
+      );
       if (result.affectedRows === 0) {
         return { status: 404, data: { error: 'Подзадача не найдена' } };
       }
@@ -385,23 +363,6 @@ class TaskService {
   }
 
   /**
-   * Get tasks for a specific date period
-   * @param {string} userId
-   * @param {string} startDate - Start date in YYYY-MM-DD format
-   * @param {string} endDate - End date in YYYY-MM-DD format
-   * @param {string} timeZone - IANA-имя зоны, например "Europe/Moscow"
-   */
-  async getTasksForPeriod(userId, startDate, endDate, timeZone = 'Europe/Moscow') {
-    try {
-      const [tasks] = await taskModel.getTasksForPeriod(userId, startDate, endDate);
-      return { status: 200, data: tasks };
-    } catch (err) {
-      console.error('❌ Ошибка при получении задач за период:', err);
-      return { status: 500, data: { error: err.message } };
-    }
-  }
-
-  /**
    * @param {string} userId
    * @param {string} timeZone — IANA-имя зоны, например "Europe/Moscow"
    */
@@ -414,7 +375,10 @@ class TaskService {
       const local = new Date(new Date().toLocaleString('en-US', { timeZone }));
       const jsDay = local.getDay();
       const dayOfWeek = jsDay === 0 ? 7 : jsDay;
-      const [templates] = await templateModel.getTemplatesForDay(userId, dayOfWeek);
+      const [templates] = await templateModel.getTemplatesForDay(
+        userId,
+        dayOfWeek,
+      );
 
       return { status: 200, data: { tasks, templates, dateString, dayOfWeek } };
     } catch (err) {

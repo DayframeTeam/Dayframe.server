@@ -5,33 +5,22 @@ const authorizeTask = require('../../middleware/authorizeTask');
 const authorizeSubTask = require('../../middleware/authorizeSubTask');
 const authenticate = require('../../middleware/authenticate');
 
-// Получить все задачи по id пользователя (оптимизированная версия)
-router.get('/', authenticate, (req, res) => taskController.getAllTasksOptimized(req, res));
-
-// Получить задачи за период
-router.get('/period', authenticate, (req, res) => taskController.getTasksForPeriod(req, res));
+// Получить все задачи по id пользователя
+router.get('/', authenticate, (req, res) => taskController.getTasksWithSubTasks(req, res));
 
 // Добавить новую задачу
 router.post('/', authenticate, (req, res) => taskController.createTask(req, res));
 
 // Удалить задачу
-router.delete('/:id', authenticate, authorizeTask, (req, res) =>
-  taskController.deleteTask(req, res)
-);
+router.delete('/:id', authenticate, authorizeTask, (req, res) => taskController.deleteTask(req, res));
 
 // Отметить задачу как выполненную
-router.patch('/is_done/:id', authenticate, authorizeTask, (req, res) =>
-  taskController.updateTaskStatus(req, res)
-);
+router.patch('/is_done/:id', authenticate, authorizeTask, (req, res) => taskController.updateTaskStatus(req, res));
 
 // 🔄 Обновить задачу
-router.patch('/:id', authenticate, authorizeTask, (req, res) =>
-  taskController.updateTask(req, res)
-);
+router.patch('/:id', authenticate, authorizeTask, (req, res) => taskController.updateTask(req, res));
 
 // Отметить подзадачу как выполненную
-router.patch('/subtasks/:id', authenticate, authorizeSubTask, (req, res) =>
-  taskController.updateSubtaskStatus(req, res)
-);
+router.patch('/subtasks/:id', authenticate, authorizeSubTask, (req, res) => taskController.updateSubtaskStatus(req, res));
 
 module.exports = router;
