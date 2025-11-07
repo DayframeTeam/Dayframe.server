@@ -4,8 +4,55 @@ function getTemplateTaskById(id) {
   return db.query('SELECT * FROM template_tasks WHERE id = ?', [id]);
 }
 
+/**
+ * Get all template tasks for a specific user
+ * @deprecated Use getAllTemplateTasksWithSubtasksByUser for better performance when subtasks are needed
+ * @param {number} user_id - User ID
+ */
 function getAllTemplateTasksByUser(user_id) {
   return db.query('SELECT * FROM template_tasks WHERE user_id = ?', [user_id]);
+}
+
+/**
+ * Get all template tasks with their subtasks for a user using SQL JOIN (optimized)
+ * @param {number} user_id - User ID
+ * @returns {Promise} Promise resolving to template tasks with subtasks in a flat structure
+ */
+function getAllTemplateTasksWithSubtasksByUser(user_id) {
+  return db
+    .query(
+      `SELECT 
+        t.id,
+        t.title,
+        t.description,
+        t.category,
+        t.priority,
+        t.exp,
+        t.start_time,
+        t.end_time,
+        t.user_id,
+        t.created_at,
+        t.special_id,
+        t.is_active,
+        t.repeat_rule,
+        t.start_active_date,
+        t.end_active_date,
+        s.id as subtask_id,
+        s.title as subtask_title,
+        s.position as subtask_position,
+        s.special_id as subtask_special_id,
+        s.created_at as subtask_created_at
+      FROM template_tasks t
+      LEFT JOIN template_subtasks s ON t.id = s.template_task_id
+      WHERE t.user_id = ?
+      ORDER BY t.id, s.position`,
+      [user_id]
+    )
+    .then(([rows]) => [rows])
+    .catch((error) => {
+      console.error('Ошибка при получении шаблонов задач с подзадачами:', error);
+      throw error;
+    });
 }
 
 function createTemplateTask(templateTask) {
@@ -139,6 +186,7 @@ function getTemplatesForDay(user_id, dayOfWeek) {
 module.exports = {
   getTemplateTaskById,
   getAllTemplateTasksByUser,
+  getAllTemplateTasksWithSubtasksByUser,
   createTemplateTask,
   deleteTemplateTaskById,
   updateTemplateTaskById,
