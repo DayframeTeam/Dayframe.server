@@ -37,21 +37,17 @@ app.use((err, req, res, next) => {
 // Register routes
 registerRoutes(app);
 
-// Database connection check
-function checkDatabaseConnection() {
-  return db
-    .getConnection()
-    .then((connection) => {
-      return connection.ping().then(() => {
-        console.log('✅ Успешное подключение к базе данных MySQL');
-        connection.release();
-        return true;
-      });
-    })
-    .catch((err) => {
-      console.error('❌ Ошибка подключения к базе данных:', err);
-      return false;
-    });
+// Оптимизированная проверка подключения - использует pool.query вместо getConnection
+// Это не занимает отдельное соединение
+async function checkDatabaseConnection() {
+  try {
+    await db.query('SELECT 1');
+    console.log('✅ Успешное подключение к базе данных MySQL');
+    return true;
+  } catch (err) {
+    console.error('❌ Ошибка подключения к базе данных:', err.message);
+    return false;
+  }
 }
 
 // Try to connect multiple times before giving up
@@ -60,8 +56,10 @@ async function ensureDatabaseConnection(attempts = 5, delay = 5000) {
     const connected = await checkDatabaseConnection();
     if (connected) return true;
 
-    console.log(`Повторная попытка подключения к БД (${i + 1}/${attempts})...`);
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    if (i < attempts - 1) {
+      console.log(`Повторная попытка подключения к БД (${i + 1}/${attempts})...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
 
   console.error('❌ Не удалось подключиться к базе данных после нескольких попыток.');
@@ -75,4 +73,25 @@ ensureDatabaseConnection().then((connected) => {
   }
 });
 
-module.exports = app;
+// Graceful shutdown function
+async function gracefulShutdown() {
+  console.log('🛑 Начало graceful shutdown...');
+  const dbModule = require('./config/db');
+
+  try {
+    if (dbModule.closePool) {
+      await dbModule.closePool();
+    }
+    console.log('✅ Graceful shutdown завершен');
+    process.exit(0);
+  } catch (err) {
+    console.error('❌ Ошибка при graceful shutdown:', err);
+    process.exit(1);
+  }
+}
+
+// Экспортируем app и функцию для graceful shutdown
+const appWithShutdown = app;
+appWithShutdown.gracefulShutdown = gracefulShutdown;
+
+module.exports = appWithShutdown;

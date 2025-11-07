@@ -4,12 +4,12 @@ require('dotenv').config();
 const { SQL_HOST, SQL_USER, SQL_PASSWORD, SQL_DB } = process.env;
 
 if (!SQL_HOST || !SQL_USER || !SQL_PASSWORD || !SQL_DB) {
-  throw new Error(
-    '❌ Отсутствуют переменные окружения для подключения к базе данных',
-  );
+  throw new Error('❌ Отсутствуют переменные окружения для подключения к базе данных');
 }
 
-const poolSize = 30;
+// Оптимизированный pool size: после оптимизации запросов (SQL JOIN) нужно меньше соединений
+// 10 соединений достаточно для большинства нагрузок
+const poolSize = 10;
 const pool = mysql.createPool({
   host: SQL_HOST,
   user: SQL_USER,
@@ -18,26 +18,12 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: poolSize,
   queueLimit: 0,
-  enableKeepAlive: true, // Enable TCP keep-alive
-  keepAliveInitialDelay: 10000, // Initial delay before sending keep-alive probes
-  connectTimeout: 30000, // Increase connection timeout to 30 seconds
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
+  connectTimeout: 30000,
+  // Соединения автоматически освобождаются после запросов
+  // Keep-alive ping не нужен - pool сам управляет соединениями
 });
-
-// More frequent keep-alive to prevent ECONNRESET
-const pingInterval = 30000; // 30 seconds
-setInterval(() => {
-  pool
-    .query('SELECT 1')
-    .then(() => {
-      console.log('✅ MySQL keep-alive ping successful');
-    })
-    .catch((err) => {
-      console.error(
-        '❌ Ошибка при поддержании соединения с MySQL:',
-        err.message,
-      );
-    });
-}, pingInterval);
 
 // Wrapper function to retry failed queries
 async function executeWithRetry(queryFn, retries = 3, delay = 500) {
@@ -50,13 +36,8 @@ async function executeWithRetry(queryFn, retries = 3, delay = 500) {
       lastError = err;
 
       // Only retry on connection errors
-      if (
-        err.code === 'ECONNRESET' ||
-        err.code === 'PROTOCOL_CONNECTION_LOST'
-      ) {
-        console.log(
-          `Reconnecting after ${err.code}, attempt ${attempt + 1}/${retries}`,
-        );
+      if (err.code === 'ECONNRESET' || err.code === 'PROTOCOL_CONNECTION_LOST') {
+        console.log(`Reconnecting after ${err.code}, attempt ${attempt + 1}/${retries}`);
         if (attempt < retries - 1) {
           await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
@@ -77,4 +58,21 @@ pool.query = function (...args) {
   return executeWithRetry(() => originalQuery(...args));
 };
 
+// Graceful shutdown function
+async function closePool() {
+  return new Promise((resolve, reject) => {
+    pool.end((err) => {
+      if (err) {
+        console.error('❌ Ошибка при закрытии pool:', err);
+        reject(err);
+      } else {
+        console.log('✅ Pool закрыт успешно');
+        resolve();
+      }
+    });
+  });
+}
+
+// Экспортируем pool и функцию для graceful shutdown
 module.exports = pool;
+module.exports.closePool = closePool;
