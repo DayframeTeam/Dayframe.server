@@ -169,6 +169,7 @@ function getAllTasksWithSubtasksByUser(user_id) {
         s.is_done as subtask_is_done,
         s.position as subtask_position,
         s.special_id as subtask_special_id,
+        s.user_id as subtask_user_id,
         s.created_at as subtask_created_at
       FROM tasks t
       LEFT JOIN subtasks s ON t.id = s.parent_task_id

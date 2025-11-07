@@ -80,6 +80,7 @@ class TaskService {
             is_done: row.subtask_is_done,
             position: row.subtask_position,
             special_id: row.subtask_special_id,
+            user_id: row.subtask_user_id,
             created_at: row.subtask_created_at,
             parent_task_id: taskId,
           });
